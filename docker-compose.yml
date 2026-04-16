@@ -1,0 +1,135 @@
+services:
+  # ─── Laravel Application ──────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: smartq_app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+      - ./docker/app/php.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - smartq
+    depends_on:
+      - db
+      - redis
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+
+  # ─── Nginx Webserver ──────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: smartq_nginx
+    restart: unless-stopped
+    ports:
+      - '8000:80'
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - smartq
+    depends_on:
+      - app
+
+  # ─── MySQL 8 ──────────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: smartq_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-smartq}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-secret}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_USER: ${DB_USERNAME:-smartq}
+    ports:
+      - '3306:3306'
+    volumes:
+      - smartq_db_data:/var/lib/mysql
+    networks:
+      - smartq
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: smartq_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - smartq_redis_data:/data
+    networks:
+      - smartq
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Queue Worker ─────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: smartq_worker
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    networks:
+      - smartq
+    depends_on:
+      - db
+      - redis
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+
+  # ─── Laravel Reverb (WebSockets) ─────────────────────────────────────────
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: smartq_reverb
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    ports:
+      - '8080:8080'
+    networks:
+      - smartq
+    depends_on:
+      - db
+      - redis
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+
+  # ─── Laravel Scheduler ────────────────────────────────────────────────────
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: smartq_scheduler
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    networks:
+      - smartq
+    depends_on:
+      - db
+      - redis
+    entrypoint: /bin/sh -c "while true; do php artisan schedule:run >> /dev/null 2>&1; sleep 60; done"
+
+networks:
+  smartq:
+    driver: bridge
+
+volumes:
+  smartq_db_data:
+  smartq_redis_data:

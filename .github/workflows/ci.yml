@@ -1,0 +1,162 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Backend: PHP + Laravel ────────────────────────────────────────────────
+  backend:
+    name: Backend (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php: ['8.2']
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: smartq_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          extensions: pdo_mysql, pdo_sqlite, redis
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Copy environment file
+        run: cp .env.example .env.testing
+
+      - name: Configure test environment
+        run: |
+          echo "APP_KEY=base64:$(openssl rand -base64 32)" >> .env.testing
+          echo "DB_CONNECTION=sqlite" >> .env.testing
+          echo "DB_DATABASE=:memory:" >> .env.testing
+          echo "BROADCAST_CONNECTION=log" >> .env.testing
+          echo "QUEUE_CONNECTION=sync" >> .env.testing
+          echo "CACHE_STORE=array" >> .env.testing
+
+      - name: Generate application key
+        run: php artisan key:generate --env=testing
+
+      - name: Run database migrations (test env)
+        run: php artisan migrate --env=testing --no-interaction
+
+      - name: Run Pest tests
+        run: ./vendor/bin/pest --ci --colors=always
+        env:
+          APP_ENV: testing
+
+      - name: Run Laravel Pint (code style)
+        run: ./vendor/bin/pint --test
+        continue-on-error: true
+
+      - name: Run PHPStan static analysis
+        run: ./vendor/bin/phpstan analyse --memory-limit=512M
+        continue-on-error: true
+
+  # ─── Frontend: Node + TypeScript + ESLint ─────────────────────────────────
+  frontend:
+    name: Frontend (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node: ['22']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npx eslint . --max-warnings 0
+
+      - name: Prettier format check
+        run: npm run format:check
+
+      - name: Build assets
+        run: npm run build
+
+  # ─── Security audit ───────────────────────────────────────────────────────
+  security:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Check for known vulnerabilities
+        run: composer audit
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: NPM security audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
