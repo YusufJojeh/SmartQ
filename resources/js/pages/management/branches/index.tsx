@@ -4,8 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type PaginatedData } from '@/types';
-import { Head, Link } from '@inertiajs/react';
-import { Building2, Plus } from 'lucide-react';
+import { Head } from '@inertiajs/react';
+import { Building2, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import BranchDialog from '@/components/dialogs/branch-dialog';
+import { router } from '@inertiajs/react';
+import { useLocale } from '@/hooks/use-locale';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Branches' }];
 
@@ -24,40 +28,59 @@ interface Props {
 }
 
 export default function BranchesIndex({ branches }: Props) {
+    const { t } = useLocale();
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [selectedBranch, setSelectedBranch] = useState<BranchRow | null>(null);
+
+    const openCreate = () => {
+        setSelectedBranch(null);
+        setDialogOpen(true);
+    };
+
+    const openEdit = (b: BranchRow) => {
+        setSelectedBranch(b);
+        setDialogOpen(true);
+    };
+
+    const destroy = (id: number) => {
+        if(confirm(t('management.deleteBranchConfirm'))) {
+            router.delete(route('branches.destroy', id));
+        }
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Branches" />
+            <Head title={t('management.branchesTitle')} />
+            <BranchDialog open={dialogOpen} onOpenChange={setDialogOpen} branch={selectedBranch as any} />
             <div className="flex flex-col gap-6 p-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
                             <Building2 className="h-6 w-6 text-primary" />
-                            Branches
+                            {t('management.branchesTitle')}
                         </h1>
-                        <p className="text-sm text-muted-foreground">Manage all branch offices</p>
+                        <p className="text-sm text-muted-foreground">{t('management.branchesDescription')}</p>
                     </div>
-                    <Button className="gap-2" asChild>
-                        <Link href="#">
-                            <Plus className="h-4 w-4" /> Add Branch
-                        </Link>
+                    <Button className="gap-2" onClick={openCreate}>
+                        <Plus className="h-4 w-4" /> {t('management.addBranch')}
                     </Button>
                 </div>
 
                 <Card>
                     <CardHeader className="pb-3">
-                        <CardTitle className="text-base">All Branches</CardTitle>
-                        <CardDescription>{branches.total} total branches</CardDescription>
+                        <CardTitle className="text-base">{t('management.allBranches')}</CardTitle>
+                        <CardDescription>{t('management.totalBranches', { count: branches.total })}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Branch</TableHead>
-                                    <TableHead>Code</TableHead>
-                                    <TableHead>City</TableHead>
-                                    <TableHead>Phone</TableHead>
-                                    <TableHead>Today's Tickets</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <TableHead>{t('common.branch')}</TableHead>
+                                    <TableHead>{t('common.code')}</TableHead>
+                                    <TableHead>{t('common.city')}</TableHead>
+                                    <TableHead>{t('common.phone')}</TableHead>
+                                    <TableHead>{t('management.todayTickets')}</TableHead>
+                                    <TableHead>{t('common.status')}</TableHead>
                                     <TableHead />
                                 </TableRow>
                             </TableHeader>
@@ -77,11 +100,12 @@ export default function BranchesIndex({ branches }: Props) {
                                                     : 'border-0 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                                                 }
                                             >
-                                                {b.is_active ? 'Active' : 'Inactive'}
+                                                {b.is_active ? t('common.active') : t('common.inactive')}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm">Edit</Button>
+                                        <TableCell className="text-right space-x-2">
+                                            <Button variant="ghost" size="sm" onClick={() => openEdit(b)}>{t('common.edit')}</Button>
+                                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => destroy(b.id)}>{t('common.delete')}</Button>
                                         </TableCell>
                                     </TableRow>
                                 ))}

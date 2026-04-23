@@ -39,8 +39,10 @@ class HandleInertiaRequests extends Middleware
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
         return array_merge(parent::share($request), [
-            ...parent::share($request),
             'name' => config('app.name'),
+            'locale' => in_array($request->session()->get('locale'), ['en', 'ar'], true)
+                ? $request->session()->get('locale')
+                : config('app.locale', 'en'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $request->user(),

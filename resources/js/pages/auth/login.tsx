@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, LogIn, Mail, Lock } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
 import InputError from '@/components/input-error';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLocale } from '@/hooks/use-locale';
 import AuthLayout from '@/layouts/auth-layout';
 
 interface LoginForm {
@@ -22,6 +23,7 @@ interface LoginProps {
 }
 
 export default function Login({ status, canResetPassword }: LoginProps) {
+    const { t } = useLocale();
     const { data, setData, post, processing, errors, reset } = useForm<LoginForm>({
         email: '',
         password: '',
@@ -36,13 +38,21 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     };
 
     return (
-        <AuthLayout title="Log in to your account" description="Enter your email and password below to log in">
-            <Head title="Log in" />
+        <AuthLayout title={t('auth.loginTitle')} description={t('auth.loginDescription')}>
+            <Head title={t('auth.loginHead')} />
 
-            <form className="flex flex-col gap-6" onSubmit={submit}>
-                <div className="grid gap-6">
-                    <div className="grid gap-2">
-                        <Label htmlFor="email">Email address</Label>
+            {status && (
+                <div className="mb-5 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
+                    {status}
+                </div>
+            )}
+
+            <form className="flex flex-col gap-5" onSubmit={submit}>
+                {/* Email */}
+                <div className="space-y-1.5">
+                    <Label htmlFor="email">{t('auth.email')}</Label>
+                    <div className="relative">
+                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             id="email"
                             type="email"
@@ -52,20 +62,26 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             autoComplete="email"
                             value={data.email}
                             onChange={(e) => setData('email', e.target.value)}
-                            placeholder="email@example.com"
+                            placeholder="you@example.com"
+                            className="h-11 pl-10"
+                            aria-describedby={errors.email ? 'email-error' : undefined}
                         />
-                        <InputError message={errors.email} />
                     </div>
+                    <InputError id="email-error" message={errors.email} />
+                </div>
 
-                    <div className="grid gap-2">
-                        <div className="flex items-center">
-                            <Label htmlFor="password">Password</Label>
-                            {canResetPassword && (
-                                <TextLink href={route('password.request')} className="ml-auto text-sm" tabIndex={5}>
-                                    Forgot password?
-                                </TextLink>
-                            )}
-                        </div>
+                {/* Password */}
+                <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="password">{t('auth.password')}</Label>
+                        {canResetPassword && (
+                            <TextLink href={route('password.request')} className="text-xs" tabIndex={5}>
+                                {t('auth.forgotPassword')}
+                            </TextLink>
+                        )}
+                    </div>
+                    <div className="relative">
+                        <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             id="password"
                             type="password"
@@ -74,31 +90,50 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             autoComplete="current-password"
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
-                            placeholder="Password"
+                            placeholder="••••••••"
+                            className="h-11 pl-10"
                         />
-                        <InputError message={errors.password} />
                     </div>
-
-                    <div className="flex items-center space-x-3">
-                        <Checkbox id="remember" name="remember" tabIndex={3} />
-                        <Label htmlFor="remember">Remember me</Label>
-                    </div>
-
-                    <Button type="submit" className="mt-4 w-full" tabIndex={4} disabled={processing}>
-                        {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                        Log in
-                    </Button>
+                    <InputError message={errors.password} />
                 </div>
 
-                <div className="text-muted-foreground text-center text-sm">
-                    Don't have an account?{' '}
-                    <TextLink href={route('register')} tabIndex={5}>
-                        Sign up
+                {/* Remember me */}
+                <div className="flex items-center gap-2.5">
+                    <Checkbox
+                        id="remember"
+                        name="remember"
+                        tabIndex={3}
+                        checked={data.remember}
+                        onCheckedChange={(checked) => setData('remember', !!checked)}
+                    />
+                    <Label htmlFor="remember" className="cursor-pointer font-normal">
+                        {t('auth.remember')}
+                    </Label>
+                </div>
+
+                {/* Submit */}
+                <Button
+                    type="submit"
+                    className="h-11 w-full gap-2 text-base font-semibold"
+                    tabIndex={4}
+                    disabled={processing}
+                >
+                    {processing ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <LogIn className="h-4 w-4" />
+                    )}
+                    {processing ? t('auth.signingIn') : t('auth.signIn')}
+                </Button>
+
+                {/* Register link */}
+                <p className="text-center text-sm text-muted-foreground">
+                    {t('auth.noAccount')}{' '}
+                    <TextLink href={route('register')} tabIndex={6}>
+                        {t('auth.createAccount')}
                     </TextLink>
-                </div>
+                </p>
             </form>
-
-            {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
         </AuthLayout>
     );
 }

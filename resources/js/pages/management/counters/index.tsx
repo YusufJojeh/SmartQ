@@ -4,8 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type PaginatedData } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Monitor, Plus } from 'lucide-react';
+import { useState } from 'react';
+import CounterDialog from '@/components/dialogs/counter-dialog';
+import { useLocale } from '@/hooks/use-locale';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Counters' }];
 
@@ -19,38 +22,60 @@ interface CounterRow {
 
 interface Props {
     counters: PaginatedData<CounterRow>;
+    branches?: {id: number, name: string}[];
 }
 
-export default function CountersIndex({ counters }: Props) {
+export default function CountersIndex({ counters, branches = [] }: Props) {
+    const { t } = useLocale();
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [selectedCounter, setSelectedCounter] = useState<CounterRow | null>(null);
+
+    const openCreate = () => {
+        setSelectedCounter(null);
+        setDialogOpen(true);
+    };
+
+    const openEdit = (c: CounterRow) => {
+        setSelectedCounter(c);
+        setDialogOpen(true);
+    };
+
+    const destroy = (id: number) => {
+        if(confirm(t('management.deleteConfirm'))) {
+            router.delete(route('counters.destroy', id));
+        }
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Counters" />
+            <Head title={t('management.countersTitle')} />
+            <CounterDialog open={dialogOpen} onOpenChange={setDialogOpen} counter={selectedCounter as any} branches={branches} />
             <div className="flex flex-col gap-6 p-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
                             <Monitor className="h-6 w-6 text-primary" />
-                            Counters
+                            {t('management.countersTitle')}
                         </h1>
-                        <p className="text-sm text-muted-foreground">Service windows and teller stations</p>
+                        <p className="text-sm text-muted-foreground">{t('management.countersDescription')}</p>
                     </div>
-                    <Button className="gap-2">
-                        <Plus className="h-4 w-4" /> Add Counter
+                    <Button className="gap-2" onClick={openCreate}>
+                        <Plus className="h-4 w-4" /> {t('management.addCounter')}
                     </Button>
                 </div>
                 <Card>
                     <CardHeader className="pb-3">
-                        <CardTitle className="text-base">All Counters</CardTitle>
-                        <CardDescription>{counters.total} total counters</CardDescription>
+                        <CardTitle className="text-base">{t('management.allCounters')}</CardTitle>
+                        <CardDescription>{t('management.totalCounters', { count: counters.total })}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Counter</TableHead>
-                                    <TableHead>Code</TableHead>
-                                    <TableHead>Branch</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <TableHead>{t('common.counter')}</TableHead>
+                                    <TableHead>{t('common.code')}</TableHead>
+                                    <TableHead>{t('common.branch')}</TableHead>
+                                    <TableHead>{t('common.status')}</TableHead>
                                     <TableHead />
                                 </TableRow>
                             </TableHeader>
@@ -68,11 +93,12 @@ export default function CountersIndex({ counters }: Props) {
                                                     : 'border-0 bg-gray-100 text-gray-600'
                                                 }
                                             >
-                                                {c.is_active ? 'Active' : 'Inactive'}
+                                                {c.is_active ? t('common.active') : t('common.inactive')}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm">Edit</Button>
+                                        <TableCell className="text-right space-x-2">
+                                            <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>{t('common.edit')}</Button>
+                                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => destroy(c.id)}>{t('common.delete')}</Button>
                                         </TableCell>
                                     </TableRow>
                                 ))}

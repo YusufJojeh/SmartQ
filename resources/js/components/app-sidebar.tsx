@@ -1,14 +1,11 @@
 import {
     BarChart3,
-    BookOpen,
     Building2,
-    ChevronRight,
     ClipboardList,
     Cpu,
     LayoutGrid,
     Monitor,
     Settings,
-    ShieldCheck,
     Tags,
     Ticket,
     Users,
@@ -29,6 +26,7 @@ import {
 import { type NavGroup, type NavItem } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
+import { useLocale } from '@/hooks/use-locale';
 
 function useRole() {
     const { auth } = usePage<{ auth: { user: { roles?: string[] } } }>().props;
@@ -43,15 +41,17 @@ function useRole() {
 
 export function AppSidebar() {
     const { isSuperAdmin, isManager, isTeller } = useRole();
+    const { t } = useLocale();
 
+    // ── Queue Operations ──────────────────────────────────────────────────────
     const queueItems: NavItem[] = [
         {
-            title: 'Dashboard',
+            title: t('nav.dashboard'),
             url: route('dashboard'),
             icon: LayoutGrid,
         },
         {
-            title: 'Live Queue',
+            title: t('nav.liveQueue'),
             url: route('tickets.index'),
             icon: Ticket,
         },
@@ -59,33 +59,34 @@ export function AppSidebar() {
 
     if (isTeller) {
         queueItems.push({
-            title: 'Teller Console',
+            title: t('nav.tellerConsole'),
             url: route('teller.console'),
             icon: Cpu,
         });
     }
 
+    // ── Management ────────────────────────────────────────────────────────────
     const managementItems: NavItem[] = [];
 
     if (isManager || isSuperAdmin) {
         managementItems.push(
             {
-                title: 'Analytics',
+                title: t('nav.analytics'),
                 url: route('reports.index'),
                 icon: BarChart3,
             },
             {
-                title: 'Branches',
+                title: t('nav.branches'),
                 url: route('branches.index'),
                 icon: Building2,
             },
             {
-                title: 'Services',
+                title: t('nav.services'),
                 url: route('service-categories.index'),
                 icon: Tags,
             },
             {
-                title: 'Counters',
+                title: t('nav.counters'),
                 url: route('counters.index'),
                 icon: Monitor,
             },
@@ -95,17 +96,17 @@ export function AppSidebar() {
     if (isSuperAdmin) {
         managementItems.push(
             {
-                title: 'Staff',
+                title: t('nav.staff'),
                 url: route('users.index'),
                 icon: Users,
             },
             {
-                title: 'Audit Logs',
+                title: t('nav.auditLogs'),
                 url: route('audit-logs.index'),
                 icon: ClipboardList,
             },
             {
-                title: 'Settings',
+                title: t('nav.settings'),
                 url: route('settings.index'),
                 icon: Settings,
             },
@@ -113,14 +114,12 @@ export function AppSidebar() {
     }
 
     const navGroups: NavGroup[] = [
-        { title: 'Queue Operations', items: queueItems },
+        { title: t('nav.queueOperations'), items: queueItems },
     ];
 
     if (managementItems.length > 0) {
-        navGroups.push({ title: 'Management', items: managementItems });
+        navGroups.push({ title: t('nav.management'), items: managementItems });
     }
-
-    const footerNavItems: NavItem[] = [];
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -141,7 +140,7 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
+                <NavFooter items={[]} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

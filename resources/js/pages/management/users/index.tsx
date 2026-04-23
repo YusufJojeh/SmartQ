@@ -4,8 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type PaginatedData } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Plus, Users } from 'lucide-react';
+import { useState } from 'react';
+import UserDialog from '@/components/dialogs/user-dialog';
+import { useLocale } from '@/hooks/use-locale';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Staff Management' }];
 
@@ -20,6 +23,9 @@ interface UserRow {
 
 interface Props {
     users: PaginatedData<UserRow>;
+    branches?: {id: number, name: string}[];
+    counters?: {id: number, name: string, branch_id: number}[];
+    roles?: {name: string}[];
 }
 
 const ROLE_STYLES: Record<string, string> = {
@@ -28,38 +34,59 @@ const ROLE_STYLES: Record<string, string> = {
     teller: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
 };
 
-export default function UsersIndex({ users }: Props) {
+export default function UsersIndex({ users, branches = [], counters = [], roles = [] }: Props) {
+    const { t } = useLocale();
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+
+    const openCreate = () => {
+        setSelectedUser(null);
+        setDialogOpen(true);
+    };
+
+    const openEdit = (u: UserRow) => {
+        setSelectedUser(u);
+        setDialogOpen(true);
+    };
+
+    const destroy = (id: number) => {
+        if(confirm(t('management.deleteConfirm'))) {
+            router.delete(route('users.destroy', id));
+        }
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Staff Management" />
+            <Head title={t('management.usersTitle')} />
+            <UserDialog open={dialogOpen} onOpenChange={setDialogOpen} user={selectedUser as any} branches={branches} counters={counters} roles={roles} />
             <div className="flex flex-col gap-6 p-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
                             <Users className="h-6 w-6 text-primary" />
-                            Staff Management
+                            {t('management.usersTitle')}
                         </h1>
-                        <p className="text-sm text-muted-foreground">Manage tellers, managers, and system users</p>
+                        <p className="text-sm text-muted-foreground">{t('management.usersDescription')}</p>
                     </div>
-                    <Button className="gap-2">
-                        <Plus className="h-4 w-4" /> Add Staff
+                    <Button className="gap-2" onClick={openCreate}>
+                        <Plus className="h-4 w-4" /> {t('management.addUser')}
                     </Button>
                 </div>
 
                 <Card>
                     <CardHeader className="pb-3">
-                        <CardTitle className="text-base">All Users</CardTitle>
-                        <CardDescription>{users.total} total users</CardDescription>
+                        <CardTitle className="text-base">{t('management.allUsers')}</CardTitle>
+                        <CardDescription>{t('management.totalUsers', { count: users.total })}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead>Branch</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <TableHead>{t('management.name')}</TableHead>
+                                    <TableHead>{t('management.email')}</TableHead>
+                                    <TableHead>{t('management.role')}</TableHead>
+                                    <TableHead>{t('common.branch')}</TableHead>
+                                    <TableHead>{t('common.status')}</TableHead>
                                     <TableHead />
                                 </TableRow>
                             </TableHeader>
@@ -79,7 +106,7 @@ export default function UsersIndex({ users }: Props) {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-sm">
-                                                {u.branch?.name ?? <span className="text-muted-foreground">All branches</span>}
+                                                {u.branch?.name ?? <span className="text-muted-foreground">{t('management.allBranchesScope')}</span>}
                                             </TableCell>
                                             <TableCell>
                                                 <Badge
@@ -89,11 +116,12 @@ export default function UsersIndex({ users }: Props) {
                                                         : 'border-0 bg-gray-100 text-gray-600'
                                                     }
                                                 >
-                                                    {u.is_active ? 'Active' : 'Inactive'}
+                                                    {u.is_active ? t('common.active') : t('common.inactive')}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="ghost" size="sm">Edit</Button>
+                                            <TableCell className="text-right space-x-2">
+                                                <Button variant="ghost" size="sm" onClick={() => openEdit(u)}>{t('common.edit')}</Button>
+                                                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => destroy(u.id)}>{t('common.delete')}</Button>
                                             </TableCell>
                                         </TableRow>
                                     );

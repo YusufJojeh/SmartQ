@@ -1,17 +1,15 @@
 import { TicketStatusBadge } from '@/components/ticket-status-badge';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type QueueTicket } from '@/types';
+import { useLocale } from '@/hooks/use-locale';
 import { Head, router } from '@inertiajs/react';
 import { Clock, RefreshCw, Star, Ticket, Users } from 'lucide-react';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Live Queue' }];
 
 interface Snapshot {
     waiting: QueueTicket[];
@@ -31,6 +29,8 @@ function waitMinutes(joinedAt: string) {
 }
 
 export default function QueueIndex({ snapshot, todayStats }: Props) {
+    const { t } = useLocale();
+    const breadcrumbs: BreadcrumbItem[] = [{ title: t('queue.title') }];
     useEffect(() => {
         const t = setInterval(() => router.reload({ only: ['snapshot', 'todayStats'] }), 20000);
         return () => clearInterval(t);
@@ -40,15 +40,15 @@ export default function QueueIndex({ snapshot, todayStats }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Live Queue" />
+            <Head title={t('queue.title')} />
             <div className="flex flex-col gap-6 p-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
                             <Ticket className="h-6 w-6 text-primary" />
-                            Live Queue
+                            {t('queue.title')}
                         </h1>
-                        <p className="text-sm text-muted-foreground">Real-time view of all active tickets</p>
+                        <p className="text-sm text-muted-foreground">{t('queue.description')}</p>
                     </div>
                     <Button
                         variant="outline"
@@ -57,17 +57,17 @@ export default function QueueIndex({ snapshot, todayStats }: Props) {
                         onClick={() => router.reload({ only: ['snapshot', 'todayStats'] })}
                     >
                         <RefreshCw className="h-4 w-4" />
-                        Refresh
+                        {t('common.refresh')}
                     </Button>
                 </div>
 
                 {/* KPIs */}
                 <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
                     {[
-                        { label: 'Total Today', value: Object.values(todayStats).reduce((a, b) => a + b, 0), icon: Users, color: 'text-foreground' },
-                        { label: 'Waiting', value: snapshot.waiting_count, icon: Clock, color: 'text-blue-600' },
-                        { label: 'In Service', value: snapshot.serving_count, icon: Ticket, color: 'text-green-600' },
-                        { label: 'Completed', value: todayStats['completed'] ?? 0, icon: Star, color: 'text-muted-foreground' },
+                        { label: t('queue.totalToday'), value: Object.values(todayStats).reduce((a, b) => a + b, 0), icon: Users, color: 'text-foreground' },
+                        { label: t('queue.waiting'), value: snapshot.waiting_count, icon: Clock, color: 'text-blue-600' },
+                        { label: t('queue.inService'), value: snapshot.serving_count, icon: Ticket, color: 'text-green-600' },
+                        { label: t('common.completed'), value: todayStats['completed'] ?? 0, icon: Star, color: 'text-muted-foreground' },
                     ].map((s) => (
                         <Card key={s.label}>
                             <CardContent className="pt-4 pb-4">
@@ -83,9 +83,9 @@ export default function QueueIndex({ snapshot, todayStats }: Props) {
 
                 <Tabs defaultValue="all">
                     <TabsList>
-                        <TabsTrigger value="all">All Active ({allActive.length})</TabsTrigger>
-                        <TabsTrigger value="serving">Serving ({snapshot.serving_count})</TabsTrigger>
-                        <TabsTrigger value="waiting">Waiting ({snapshot.waiting_count})</TabsTrigger>
+                        <TabsTrigger value="all">{t('queue.allActive')} ({allActive.length})</TabsTrigger>
+                        <TabsTrigger value="serving">{t('queue.serving')} ({snapshot.serving_count})</TabsTrigger>
+                        <TabsTrigger value="waiting">{t('queue.waiting')} ({snapshot.waiting_count})</TabsTrigger>
                     </TabsList>
 
                     {(['all', 'serving', 'waiting'] as const).map((tab) => {
@@ -99,11 +99,11 @@ export default function QueueIndex({ snapshot, todayStats }: Props) {
                                 <Card>
                                     <CardHeader className="pb-3">
                                         <CardTitle className="text-base">
-                                            {tab === 'all' ? 'All Active Tickets' :
-                                             tab === 'serving' ? 'Currently Being Served' : 'Waiting Queue'}
+                                            {tab === 'all' ? t('queue.allActiveTickets') :
+                                             tab === 'serving' ? t('queue.currentlyServed') : t('queue.waitingQueue')}
                                         </CardTitle>
                                         <CardDescription>
-                                            {items.length} ticket{items.length !== 1 ? 's' : ''}
+                                            {t('queue.ticketCount', { count: items.length, plural: items.length !== 1 ? 's' : '' })}
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="p-0">
@@ -111,45 +111,45 @@ export default function QueueIndex({ snapshot, todayStats }: Props) {
                                             {items.length === 0 ? (
                                                 <div className="py-16 text-center">
                                                     <Ticket className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" />
-                                                    <p className="text-sm text-muted-foreground">No tickets in this state</p>
+                                                    <p className="text-sm text-muted-foreground">{t('queue.noTickets')}</p>
                                                 </div>
                                             ) : (
                                                 <Table>
                                                     <TableHeader>
                                                         <TableRow>
-                                                            <TableHead>Ticket</TableHead>
-                                                            <TableHead>Service</TableHead>
-                                                            <TableHead>Customer</TableHead>
-                                                            <TableHead>Status</TableHead>
-                                                            <TableHead>Wait</TableHead>
-                                                            <TableHead>Counter</TableHead>
+                                                            <TableHead>{t('common.ticket')}</TableHead>
+                                                            <TableHead>{t('common.service')}</TableHead>
+                                                            <TableHead>{t('queue.customer')}</TableHead>
+                                                            <TableHead>{t('common.status')}</TableHead>
+                                                            <TableHead>{t('queue.wait')}</TableHead>
+                                                            <TableHead>{t('common.counter')}</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
-                                                        {items.map((t) => (
-                                                            <TableRow key={t.id}>
+                                                        {items.map((ticket) => (
+                                                            <TableRow key={ticket.id}>
                                                                 <TableCell>
                                                                     <div className="flex items-center gap-1.5">
-                                                                        <span className="font-mono font-bold">{t.display_code}</span>
-                                                                        {t.priority_level <= 2 && (
+                                                                        <span className="font-mono font-bold">{ticket.display_code}</span>
+                                                                        {ticket.priority_level <= 2 && (
                                                                             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                                                                         )}
                                                                     </div>
                                                                 </TableCell>
                                                                 <TableCell className="text-muted-foreground text-sm">
-                                                                    {t.service_category?.name ?? '—'}
+                                                                    {ticket.service_category?.name ?? '-'}
                                                                 </TableCell>
                                                                 <TableCell className="text-sm">
-                                                                    {t.customer_name ?? <span className="text-muted-foreground">Anonymous</span>}
+                                                                    {ticket.customer_name ?? <span className="text-muted-foreground">{t('queue.anonymous')}</span>}
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <TicketStatusBadge status={t.status as any} />
+                                                                    <TicketStatusBadge status={ticket.status} />
                                                                 </TableCell>
                                                                 <TableCell className="text-sm tabular-nums">
-                                                                    {waitMinutes(t.joined_at)}m
+                                                                    {t('common.minutesShort', { count: waitMinutes(ticket.joined_at) })}
                                                                 </TableCell>
                                                                 <TableCell className="text-sm text-muted-foreground">
-                                                                    {t.counter?.name ?? '—'}
+                                                                    {ticket.counter?.name ?? '-'}
                                                                 </TableCell>
                                                             </TableRow>
                                                         ))}
