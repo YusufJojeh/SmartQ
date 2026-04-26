@@ -2,12 +2,39 @@
   "permissions": {
     "allow": [
       "Bash(php --version)",
+      "Bash(php -v)",
+      "Bash(php -m)",
       "Bash(composer --version)",
-      "Bash(npm --version)",
       "Bash(composer require:*)",
       "Bash(php artisan:*)",
+
+      "Bash(npm --version)",
       "Bash(npm install:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(npm run build:ssr)",
+      "Bash(npm run lint)",
+      "Bash(npm run format)",
+      "Bash(npm run format:check)",
+
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx tsc --version)",
+      "Bash(npx eslint .)",
+      "Bash(npx eslint . --fix)",
+      "Bash(npx eslint . --max-warnings 0)",
+
+      "Bash(./vendor/bin/pest --version)",
+      "Bash(./vendor/bin/pest --list-tests)",
+      "Bash(./vendor/bin/pest --ci --colors=never)",
+
+      "Bash(where mysql)",
+      "Bash(mysql -u root -e \"SELECT VERSION\\(\\); SHOW DATABASES;\")",
+
+      "Bash(mkdir -p public/assets)",
+      "Bash(cp smartq-nexus/src/assets/*.jpg public/assets/)",
+
+      "Read(//c/Users/Yusuf/AppData/Local/Programs/**)"
     ]
   }
 }
