@@ -4,74 +4,169 @@ namespace App\Services\Assistant;
 
 class AssistantIntentRouter
 {
+    /**
+     * Analyse the user message and return an ordered list of tools to call,
+     * each with its own extracted parameters.
+     *
+     * Return shape:
+     * [
+     *   'tools' => [
+     *     ['tool' => 'ticket.status', 'input' => ['ticket_code' => 'A001']],
+     *     ['tool' => 'queue.status',  'input' => []],
+     *   ]
+     * ]
+     */
     public function route(string $message, array $context): array
     {
-        $tools = [];
-        $params = [];
+        $lower    = mb_strtolower($message);
+        $branchId = $context['branch_id'] ?? null;
+        $scope    = $context['scope'] ?? 'public';
+        $tools    = [];
+        $seen     = [];
 
-        $lowerMessage = strtolower($message);
+        $add = function (string $toolName, array $input = []) use (&$tools, &$seen) {
+            if (!in_array($toolName, $seen, true)) {
+                $tools[]  = ['tool' => $toolName, 'input' => $input];
+                $seen[]   = $toolName;
+            }
+        };
 
-        // Extract ticket ID/code if present
-        if (preg_match('/(?:ticket|ticket code|code)[\s:]*([A-Z0-9-]+)/i', $message, $matches)) {
-            $params['ticket_code'] = strtoupper($matches[1]);
-            $tools[] = 'ticket.status';
+        // ── 1. Ticket lookup — extract code/ID first (highest priority) ──────
+        $ticketInput = $this->extractTicketInput($message);
+        if ($ticketInput) {
+            $add('ticket.status', $ticketInput);
         }
 
-        // Queue-related queries
-        if (preg_match('/queue|waiting|customers|people|count|status/i', $message)) {
-            $tools[] = 'queue.status';
+        // ── 2. Queue status ───────────────────────────────────────────────────
+        if ($this->matches($lower, [
+            // English
+            'queue', 'waiting', 'how many', 'customers', 'people', 'count', 'status',
+            'line', 'queue size', 'queue length',
+            // Arabic
+            'طابور', 'انتظار', 'عدد', 'كم', 'حالة', 'أشخاص', 'زبائن', 'مستخدمين',
+        ])) {
+            $add('queue.status', $branchId ? ['branch_id' => $branchId] : []);
         }
 
-        // Branch load/capacity queries
-        if (preg_match('/branch|capacity|busy|load|counters|services|average wait/i', $message)) {
-            $tools[] = 'branch.load';
-            if ($context['branch_id'] ?? null) {
-                $params['branch_id'] = $context['branch_id'];
+        // ── 3. Branch capacity / load ─────────────────────────────────────────
+        if ($this->matches($lower, [
+            // English
+            'branch', 'capacity', 'busy', 'load', 'services', 'average wait', 'how busy',
+            'branch status', 'branch load', 'branch capacity',
+            // Arabic
+            'فرع', 'طاقة', 'مشغول', 'حمل', 'خدمات', 'متوسط انتظار',
+        ])) {
+            $branchInput = $branchId ? ['branch_id' => $branchId] : [];
+            $add('branch.load', $branchInput);
+        }
+
+        // ── 4. Counter / teller status ────────────────────────────────────────
+        if ($this->matches($lower, [
+            // English
+            'counter', 'teller', 'active', 'serving', 'assigned', 'open counter', 'window',
+            'staff', 'who is serving', 'available counter',
+            // Arabic
+            'شباك', 'موظف', 'نافذة', 'موظفين', 'خدمة', 'يخدم', 'متاح',
+        ])) {
+            $add('counters.status', $branchId ? ['branch_id' => $branchId] : []);
+        }
+
+        // ── 5. Reports / statistics (manager+ only) ───────────────────────────
+        if ($this->matches($lower, [
+            // English
+            'report', 'summary', 'statistics', 'stats', 'daily', 'weekly', 'peak', 'trend',
+            'performance', 'kpi', 'metric', 'analytics', 'throughput', 'volume',
+            // Arabic
+            'تقرير', 'ملخص', 'إحصاء', 'إحصائيات', 'يومي', 'أسبوعي', 'ذروة', 'أداء',
+        ])) {
+            $period      = $this->extractPeriod($lower);
+            $reportInput = array_filter(['branch_id' => $branchId, 'period' => $period]);
+            $add('reports.summary', $reportInput);
+        }
+
+        // ── 6. Delay / wait-time analysis ─────────────────────────────────────
+        if ($this->matches($lower, [
+            // English
+            'why', 'slow', 'delay', 'long wait', 'issue', 'problem', 'bottleneck',
+            'too long', 'taking long', 'waiting too', 'what\'s wrong', 'reason for',
+            // Arabic
+            'لماذا', 'بطيء', 'تأخير', 'وقت طويل', 'مشكلة', 'سبب', 'عطل',
+        ])) {
+            $add('delay.explain', $branchId ? ['branch_id' => $branchId] : []);
+        }
+
+        // ── 7. Policy ─────────────────────────────────────────────────────────
+        if ($this->matches($lower, [
+            // English
+            'policy', 'rule', 'setting', 'configuration', 'max wait', 'limit', 'sla',
+            'service level', 'guideline', 'protocol', 'procedure',
+            // Arabic
+            'سياسة', 'قاعدة', 'إعداد', 'تكوين', 'حد الانتظار', 'مستوى الخدمة',
+        ])) {
+            $add('policy.read', $branchId ? ['branch_id' => $branchId] : []);
+        }
+
+        // ── 8. Fallback defaults ──────────────────────────────────────────────
+        if (empty($tools)) {
+            if ($scope === 'public') {
+                // Public users most likely want their ticket status
+                $add('queue.status', []);
+            } else {
+                // Staff: give overview
+                $add('queue.status', $branchId ? ['branch_id' => $branchId] : []);
             }
         }
 
-        // Counter/teller status
-        if (preg_match('/counter|teller|active|serving|assigned/i', $message)) {
-            $tools[] = 'counters.status';
-        }
+        return ['tools' => $tools];
+    }
 
-        // Reports queries (manager/super_admin only)
-        if (preg_match('/report|summary|statistics|stats|daily|weekly|peak|trend/i', $message)) {
-            $tools[] = 'reports.summary';
-            if ($context['branch_id'] ?? null) {
-                $params['branch_id'] = $context['branch_id'];
+    // ─── Helpers ───────────────────────────────────────────────────────────
+
+    /**
+     * Check if any keyword appears in the lowercased message.
+     */
+    private function matches(string $lower, array $keywords): bool
+    {
+        foreach ($keywords as $kw) {
+            if (str_contains($lower, mb_strtolower($kw))) {
+                return true;
             }
         }
+        return false;
+    }
 
-        // Wait time analysis
-        if (preg_match('/why|slow|delay|wait|long|issue|problem|issue/i', $message)) {
-            $tools[] = 'delay.explain';
-            if ($context['branch_id'] ?? null) {
-                $params['branch_id'] = $context['branch_id'];
-            }
+    /**
+     * Extract ticket code or ID from the message.
+     * Supports formats: A001, ABC123, T-1234, #45, "ticket 123"
+     */
+    private function extractTicketInput(string $message): ?array
+    {
+        // Pattern 1: explicit "ticket" keyword followed by alphanumeric code
+        if (preg_match('/\b(?:ticket|code|رقم|تذكرة)\s*[:#\-]?\s*([A-Z0-9]{2,10})/iu', $message, $m)) {
+            return ['ticket_code' => strtoupper(trim($m[1]))];
         }
 
-        // Policy queries
-        if (preg_match('/policy|rule|setting|configuration|policy|max wait|limit/i', $message)) {
-            $tools[] = 'policy.read';
+        // Pattern 2: standalone uppercase ticket codes like B001 or XY-123
+        if (preg_match('/\b([A-Z]{1,3}[0-9]{2,5})\b/', $message, $m)) {
+            return ['ticket_code' => strtoupper($m[1])];
         }
 
-        // Default: if no specific match and public, try ticket status
-        if (empty($tools) && $context['scope'] === 'public') {
-            $tools[] = 'ticket.status';
+        // Pattern 3: numeric ID only — "check ticket 456"
+        if (preg_match('/\b(?:ticket|id|رقم)\s*#?(\d{3,6})\b/i', $message, $m)) {
+            return ['ticket_id' => (int) $m[1]];
         }
 
-        // Default: if no specific match and operations, try queue status
-        if (empty($tools) && $context['scope'] === 'operations') {
-            $tools[] = 'queue.status';
+        return null;
+    }
+
+    /**
+     * Detect "weekly" vs default "daily" in the message.
+     */
+    private function extractPeriod(string $lower): string
+    {
+        if ($this->matches($lower, ['week', 'weekly', 'this week', 'last 7', '7 days', 'أسبوع', 'أسبوعي'])) {
+            return 'weekly';
         }
-
-        // Remove duplicates
-        $tools = array_unique($tools);
-
-        return [
-            'tools' => $tools,
-            'params' => $params,
-        ];
+        return 'daily';
     }
 }

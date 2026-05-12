@@ -1,9 +1,12 @@
-import type { AssistantContext } from '@/types';
-import { usePage } from '@inertiajs/react';
+import type { AssistantContext, SharedData } from '@/types';
 
-const SENSITIVE_PATTERNS = /email|phone|token|password|secret|api_key|bearer|authorization|customer_name|customer_phone|address|ssn|credit_card|@/i;
+/**
+ * Redacts sensitive keys from nested objects.
+ * Only key names trigger redaction — not string values — to avoid over-redacting.
+ */
+const SENSITIVE_KEY_PATTERN = /email|phone|token|password|secret|api_key|bearer|authorization|customer_name|customer_phone|address|ssn|credit_card/i;
 
-function redactValue(value: unknown): unknown {
+export function redactValue(value: unknown): unknown {
     if (Array.isArray(value)) {
         return value.map((v) => redactValue(v));
     }
@@ -11,7 +14,7 @@ function redactValue(value: unknown): unknown {
     if (typeof value === 'object' && value !== null) {
         const result: Record<string, unknown> = {};
         for (const [key, val] of Object.entries(value)) {
-            if (SENSITIVE_PATTERNS.test(key)) {
+            if (SENSITIVE_KEY_PATTERN.test(key)) {
                 result[key] = '[redacted]';
             } else {
                 result[key] = redactValue(val);
@@ -20,39 +23,37 @@ function redactValue(value: unknown): unknown {
         return result;
     }
 
-    if (typeof value === 'string') {
-        if (SENSITIVE_PATTERNS.test(value) || value.length > 5000) {
-            return '[redacted]';
-        }
+    // Truncate very long strings but do NOT redact based on content
+    if (typeof value === 'string' && value.length > 2000) {
+        return value.substring(0, 2000) + '…[truncated]';
     }
 
     return value;
 }
 
-export function buildAssistantContext(overrides?: Partial<AssistantContext>): AssistantContext {
-    const page = usePage();
-    const user = page.props.auth?.user;
-    const locale = (page.props.locale as 'en' | 'ar') || 'en';
-    const route = page.component;
-
-    // Determine scope based on authentication
+/**
+ * Build the assistant context from page props.
+ * Call this inside a React component body (not inside an event handler)
+ * and pass the result down to event handlers.
+ */
+export function buildAssistantContext(
+    pageProps: SharedData,
+    component: string,
+    overrides?: Partial<AssistantContext>,
+): AssistantContext {
+    const user   = pageProps.auth?.user;
+    const locale = (pageProps.locale as 'en' | 'ar') || 'en';
     const scope: 'public' | 'operations' = user ? 'operations' : 'public';
 
-    // Build context
     const context: AssistantContext = {
         scope,
         url: window.location.pathname,
-        route,
+        route: component,
         locale,
-        page: page.props as Record<string, unknown>,
+        page: redactValue(pageProps) as Record<string, unknown>,
         session_id: getSessionId(),
         ...overrides,
     };
-
-    // Redact sensitive data from page context
-    if (context.page) {
-        context.page = redactValue(context.page) as Record<string, unknown>;
-    }
 
     return context;
 }

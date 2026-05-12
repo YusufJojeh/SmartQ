@@ -32,54 +32,60 @@ class AssistantController extends Controller
     {
         $request->validate([
             'conversation_id' => 'nullable|integer|exists:assistant_conversations,id',
-            'scope' => 'required|in:public,operations',
-            'session_id' => 'required|string',
+            'scope'           => 'nullable|in:public,operations',
+            'session_id'      => 'nullable|string|max:100',
         ]);
 
-        $user = auth()->user();
-        $scope = $request->input('scope');
+        $user      = auth()->user();
+        $scope     = $request->input('scope', $user ? 'operations' : 'public');
         $sessionId = $request->input('session_id');
 
-        // Build owner key based on scope
-        $ownerKey = $scope === 'public' ? 'public' : ($user ? "user:{$user->id}" : null);
+        // Build owner key — prevents cross-user access
+        $ownerKey = $scope === 'public'
+            ? 'public'
+            : ($user ? "user:{$user->id}" : null);
 
+        // Unauthenticated users cannot access operations scope history
         if (!$ownerKey) {
-            return response()->json([
-                'messages' => [],
-                'conversationId' => null,
-            ]);
+            return response()->json(['messages' => [], 'conversationId' => null]);
         }
 
-        // Find or create conversation
-        $conversation = AssistantConversation::where('scope', $scope)
-            ->where('session_id', $sessionId)
-            ->where('owner_key', $ownerKey)
-            ->first();
+        // Locate the conversation — require session_id or conversation_id
+        $query = AssistantConversation::where('scope', $scope)
+            ->where('owner_key', $ownerKey);
+
+        if ($request->filled('conversation_id')) {
+            $query->where('id', $request->integer('conversation_id'));
+        } elseif ($sessionId) {
+            $query->where('session_id', $sessionId);
+        } else {
+            // No identifier provided → return empty (client will resend after first message)
+            return response()->json(['messages' => [], 'conversationId' => null]);
+        }
+
+        $conversation = $query->first();
 
         if (!$conversation) {
-            return response()->json([
-                'messages' => [],
-                'conversationId' => null,
-            ]);
+            return response()->json(['messages' => [], 'conversationId' => null]);
         }
 
         $messages = $conversation->messages()
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(fn ($msg) => [
-                'id' => $msg->id,
-                'role' => $msg->role,
-                'content' => $msg->content,
+                'id'        => $msg->id,
+                'role'      => $msg->role,
+                'content'   => $msg->content,
                 'createdAt' => $msg->created_at->toIso8601String(),
-                'metadata' => $msg->role === 'assistant' ? [
-                    'provider' => $msg->provider_used,
-                    'fallbackUsed' => $msg->fallback_used,
+                'metadata'  => $msg->role === 'assistant' ? [
+                    'provider'     => $msg->provider_used,
+                    'fallbackUsed' => (bool) $msg->fallback_used,
                 ] : null,
             ])
             ->all();
 
         return response()->json([
-            'messages' => $messages,
+            'messages'       => $messages,
             'conversationId' => $conversation->id,
         ]);
     }
@@ -107,11 +113,11 @@ class AssistantController extends Controller
             }
 
             // Call assistant service
+            // Use client-supplied session_id from context (not server session)
             $response = $this->assistantService->respond(
                 $validated['message'],
                 array_merge($validated['context'], [
                     'user_id' => $user?->id,
-                    'session_id' => session()->getId(),
                 ])
             );
 
