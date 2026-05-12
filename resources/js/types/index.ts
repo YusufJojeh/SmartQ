@@ -147,3 +147,43 @@ export interface MetricCard {
     icon?: LucideIcon;
     description?: string;
 }
+
+// ─── AI Assistant Types ────────────────────────────────────────────────────
+
+export interface AssistantMessage {
+    role: 'user' | 'assistant';
+    content: string;
+    createdAt?: string;
+    metadata?: {
+        provider?: 'openai' | 'ollama';
+        fallbackUsed?: boolean;
+        sources?: ToolResult[];
+    };
+}
+
+export interface AssistantContext {
+    scope: 'public' | 'operations';
+    url?: string;
+    route?: string;
+    locale?: 'en' | 'ar';
+    page?: Record<string, unknown>;
+    session_id: string;
+}
+
+export interface ToolResult {
+    tool: string;
+    status: 'success' | 'denied' | 'failed';
+    timestamp?: string;
+    callId?: number;
+}
+
+export interface AssistantResponse {
+    message?: string;
+    error?: string;
+    success?: boolean;
+    providerUsed?: 'openai' | 'ollama' | null;
+    fallbackUsed?: boolean;
+    dataChecked?: boolean;
+    toolResults?: ToolResult[];
+    conversationId?: number;
+}
