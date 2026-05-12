@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AssistantController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Queue\PublicDisplayController;
 use App\Http\Controllers\Queue\TellerConsoleController;
@@ -22,12 +23,24 @@ Route::get('/track/{id}/{code}', [TicketController::class, 'track'])->name('tick
 // Public display screen (branch kiosk)
 Route::get('/display/{branch}', [PublicDisplayController::class, 'show'])->name('display.show');
 
+// AI Assistant (public routes)
+Route::get('/assistant', [AssistantController::class, 'publicPage'])->name('assistant.public');
+Route::get('/assistant/history', [AssistantController::class, 'history'])
+    ->middleware('throttle:30,1')
+    ->name('assistant.history');
+Route::post('/assistant/respond', [AssistantController::class, 'respond'])
+    ->middleware('throttle:20,1')
+    ->name('assistant.respond');
+
 // ─── Protected app routes ─────────────────────────────────────────────────────
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
+    // AI Assistant (operations)
+    Route::get('/ai-assistant', [AssistantController::class, 'operationsPage'])->name('ai-assistant');
 
     // Live queue monitor
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
