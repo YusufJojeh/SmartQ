@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    'assistant' => [
+        'openai' => [
+            'key' => env('OPENAI_API_KEY'),
+            'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com'),
+            'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        ],
+        'ollama' => [
+            'base_url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
+            'model' => env('OLLAMA_MODEL', 'llama2'),
+        ],
+        'fallback_enabled' => env('AI_ASSISTANT_FALLBACK_ENABLED', true),
+        'timeout' => (int) env('AI_ASSISTANT_TIMEOUT', 30),
+        'max_tokens' => (int) env('AI_ASSISTANT_MAX_TOKENS', 800),
+    ],
+
 ];
