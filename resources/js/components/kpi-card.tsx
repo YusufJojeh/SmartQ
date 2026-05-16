@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
-import { TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
 
 interface KpiCardProps {
     title: string;
@@ -13,43 +13,38 @@ interface KpiCardProps {
     className?: string;
 }
 
-export function KpiCard({
-    title,
-    value,
-    description,
-    icon: Icon,
-    delta,
-    deltaType = 'neutral',
-    accent,
-    className,
-}: KpiCardProps) {
+export function KpiCard({ title, value, description, icon: Icon, delta, deltaType = 'neutral', className }: KpiCardProps) {
     const ChangeIcon = deltaType === 'positive' ? TrendingUp : deltaType === 'negative' ? TrendingDown : Minus;
 
     return (
-        <div className={cn(
-            'group relative overflow-hidden rounded-2xl hairline bg-card p-5 shadow-soft transition hover:shadow-elev hover:-translate-y-0.5',
-            className,
-        )}>
+        <div
+            className={cn(
+                'group hairline bg-card shadow-soft hover:shadow-elev relative overflow-hidden rounded-2xl p-5 transition hover:-translate-y-0.5',
+                className,
+            )}
+        >
             <div className="flex items-start justify-between gap-3">
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{title}</div>
+                <div className="text-muted-foreground font-mono text-[10px] tracking-[0.2em] uppercase">{title}</div>
                 {Icon ? (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+                    <div className="bg-accent-soft text-accent flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
                         <Icon className="h-4 w-4" />
                     </div>
                 ) : null}
             </div>
 
-            <div className="font-display mt-3 text-4xl tabular text-ink">{value}</div>
+            <div className="font-display tabular text-ink mt-3 text-4xl">{value}</div>
 
-            {(description || delta) ? (
+            {description || delta ? (
                 <div className="mt-2 flex items-center gap-2 text-xs">
                     {delta ? (
-                        <span className={cn(
-                            'inline-flex items-center gap-1 font-mono text-[10px]',
-                            deltaType === 'positive' && 'text-success',
-                            deltaType === 'negative' && 'text-destructive',
-                            deltaType === 'neutral' && 'text-muted-foreground',
-                        )}>
+                        <span
+                            className={cn(
+                                'inline-flex items-center gap-1 font-mono text-[10px]',
+                                deltaType === 'positive' && 'text-success',
+                                deltaType === 'negative' && 'text-destructive',
+                                deltaType === 'neutral' && 'text-muted-foreground',
+                            )}
+                        >
                             <ChangeIcon className="h-3 w-3" />
                             {delta}
                         </span>
@@ -59,7 +54,7 @@ export function KpiCard({
             ) : null}
 
             {/* Amber glow on hover */}
-            <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-accent/8 blur-2xl transition group-hover:bg-accent/14" />
+            <div className="bg-accent/8 group-hover:bg-accent/14 pointer-events-none absolute -top-6 -right-6 h-20 w-20 rounded-full blur-2xl transition" />
         </div>
     );
 }

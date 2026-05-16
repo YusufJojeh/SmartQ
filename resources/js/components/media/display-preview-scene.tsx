@@ -11,10 +11,10 @@ export function DisplayPreviewScene() {
         <Surface tone="hero" glow className="overflow-hidden p-6">
             <div className="mb-4 flex items-center justify-between">
                 <div>
-                    <div className="text-[11px] uppercase tracking-[0.22em] text-white/60">Hall display</div>
+                    <div className="text-[11px] tracking-[0.22em] text-white/60 uppercase">Hall display</div>
                     <div className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-white">Now serving</div>
                 </div>
-                <div className="rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-white/70">
+                <div className="rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[11px] tracking-[0.18em] text-white/70 uppercase">
                     1080p scene
                 </div>
             </div>
@@ -25,7 +25,7 @@ export function DisplayPreviewScene() {
                             <span className={`h-3 w-3 rounded-full ${row.tone}`} />
                             <div className="text-3xl font-semibold tracking-[-0.06em] text-white">{row.code}</div>
                         </div>
-                        <div className="text-sm font-medium uppercase tracking-[0.18em] text-white/72">{row.counter}</div>
+                        <div className="text-sm font-medium tracking-[0.18em] text-white/72 uppercase">{row.counter}</div>
                     </div>
                 ))}
             </div>

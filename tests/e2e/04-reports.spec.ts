@@ -11,7 +11,8 @@ test('reports page renders live report sections and real export UI', async ({ pa
     await expect(page.getByText('Teller Productivity')).toBeVisible();
     await expect(page.getByText('Peak Hour Analysis')).toBeVisible();
     await expect(page.getByText('Staffing Recommendation')).toBeVisible();
-    const exportLink = page.getByRole('link', { name: /export csv/i });
+    // Export changed to XLSX — now an <a download> element, not an Inertia Link
+    const exportLink = page.locator('a[href*="reports/export"]');
     await expect(exportLink).toBeVisible();
     await expect(exportLink).toHaveAttribute('href', /\/reports\/export$/);
 });

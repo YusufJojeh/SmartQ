@@ -69,10 +69,10 @@ export function PromptInput({ onSubmit, disabled = false, placeholder, ariaLabel
                 dir={isRtl ? 'rtl' : 'ltr'}
                 aria-label={ariaLabel ?? resolvedPlaceholder}
                 className={cn(
-                    'flex-1 resize-none rounded-xl hairline bg-paper-soft px-4 py-2.5 text-sm text-ink',
+                    'hairline bg-paper-soft text-ink flex-1 resize-none rounded-xl px-4 py-2.5 text-sm',
                     'placeholder:text-muted-foreground/60',
-                    'focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    'focus:ring-accent/30 focus:border-accent focus:ring-2 focus:outline-none',
+                    'disabled:cursor-not-allowed disabled:opacity-50',
                     'transition-all duration-150',
                 )}
             />
@@ -82,14 +82,12 @@ export function PromptInput({ onSubmit, disabled = false, placeholder, ariaLabel
                 aria-label={disabled ? t('assistant.sendingLabel') : t('assistant.sendLabel')}
                 className={cn(
                     'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition',
-                    canSend
-                        ? 'bg-ink text-paper shadow-soft hover:bg-ink-soft active:scale-95'
-                        : 'bg-muted text-muted-foreground cursor-not-allowed',
+                    canSend ? 'bg-ink text-paper shadow-soft hover:bg-ink-soft active:scale-95' : 'bg-muted text-muted-foreground cursor-not-allowed',
                 )}
             >
                 {disabled ? (
                     /* Subtle spinner using the pulse animation */
-                    <span className="h-4 w-4 rounded-full border-2 border-paper/40 border-t-paper animate-spin" />
+                    <span className="border-paper/40 border-t-paper h-4 w-4 animate-spin rounded-full border-2" />
                 ) : (
                     <Send className={cn('h-4 w-4', isRtl && 'scale-x-[-1]')} />
                 )}

@@ -12,8 +12,10 @@ use App\Models\QueueTicket;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Cache\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -28,10 +30,10 @@ class AssistantTest extends TestCase
         return [
             'message' => 'test',
             'context' => [
-                'scope'      => 'public',
-                'url'        => '/assistant',
-                'route'      => 'assistant.public',
-                'locale'     => 'en',
+                'scope' => 'public',
+                'url' => '/assistant',
+                'route' => 'assistant.public',
+                'locale' => 'en',
                 'session_id' => $sessionId,
             ],
         ];
@@ -42,10 +44,10 @@ class AssistantTest extends TestCase
         return [
             'message' => 'test',
             'context' => [
-                'scope'      => 'operations',
-                'url'        => '/ai-assistant',
-                'route'      => 'ai-assistant',
-                'locale'     => 'en',
+                'scope' => 'operations',
+                'url' => '/ai-assistant',
+                'route' => 'ai-assistant',
+                'locale' => 'en',
                 'session_id' => $sessionId,
             ],
         ];
@@ -68,7 +70,7 @@ class AssistantTest extends TestCase
     {
         Http::fake([
             '*/v1/chat/completions' => Http::response([], 500),
-            '*/api/generate'        => Http::response(['response' => $reply], 200),
+            '*/api/generate' => Http::response(['response' => $reply], 200),
         ]);
     }
 
@@ -77,7 +79,7 @@ class AssistantTest extends TestCase
     {
         Http::fake([
             '*/v1/chat/completions' => Http::response([], 500),
-            '*/api/generate'        => Http::response([], 500),
+            '*/api/generate' => Http::response([], 500),
         ]);
     }
 
@@ -85,7 +87,7 @@ class AssistantTest extends TestCase
     {
         parent::setUp();
         // Laravel 12 uses ValidateCsrfToken (not VerifyCsrfToken); disable for API tests
-        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+        $this->withoutMiddleware(ValidateCsrfToken::class);
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
@@ -148,7 +150,7 @@ class AssistantTest extends TestCase
     {
         $this->fakeOpenAi();
 
-        $payload          = $this->publicCtx();
+        $payload = $this->publicCtx();
         $payload['message'] = 'What is the queue status?';
 
         $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -156,7 +158,7 @@ class AssistantTest extends TestCase
 
     public function test_empty_message_is_rejected(): void
     {
-        $payload          = $this->publicCtx();
+        $payload = $this->publicCtx();
         $payload['message'] = '   ';
 
         $this->postJson('/assistant/respond', $payload)
@@ -176,8 +178,8 @@ class AssistantTest extends TestCase
 
     public function test_invalid_scope_is_rejected(): void
     {
-        $payload                      = $this->publicCtx();
-        $payload['context']['scope']  = 'invalid_scope';
+        $payload = $this->publicCtx();
+        $payload['context']['scope'] = 'invalid_scope';
 
         $this->postJson('/assistant/respond', $payload)
             ->assertStatus(422)
@@ -186,7 +188,7 @@ class AssistantTest extends TestCase
 
     public function test_message_exceeding_5000_chars_is_rejected(): void
     {
-        $payload          = $this->publicCtx();
+        $payload = $this->publicCtx();
         $payload['message'] = str_repeat('a', 5001);
 
         $this->postJson('/assistant/respond', $payload)
@@ -221,7 +223,7 @@ class AssistantTest extends TestCase
         $this->fakeOpenAi('Noted.');
         $xssMessage = '<script>alert("xss")</script> status?';
 
-        $payload          = $this->publicCtx('xss_session');
+        $payload = $this->publicCtx('xss_session');
         $payload['message'] = $xssMessage;
 
         $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -317,7 +319,7 @@ class AssistantTest extends TestCase
 
         $this->fakeOpenAi('I can only check an individual ticket in the public assistant.');
 
-        $payload          = $this->publicCtx('qs_session');
+        $payload = $this->publicCtx('qs_session');
         $payload['message'] = 'How many people are waiting?';
 
         $response = $this->postJson('/assistant/respond', $payload);
@@ -333,14 +335,14 @@ class AssistantTest extends TestCase
     public function test_ticket_status_lookup_works_by_ticket_number(): void
     {
         $ticket = QueueTicket::factory()->create([
-            'status'        => 'waiting',
+            'status' => 'waiting',
             'ticket_number' => 'A001',
-            'display_code'  => 'A001',
+            'display_code' => 'A001',
         ]);
 
         $this->fakeOpenAi('Ticket A001 is waiting.');
 
-        $payload          = $this->publicCtx('tk_session');
+        $payload = $this->publicCtx('tk_session');
         $payload['message'] = 'What is the status of ticket A001?';
 
         $response = $this->postJson('/assistant/respond', $payload);
@@ -355,15 +357,15 @@ class AssistantTest extends TestCase
     public function test_ticket_status_hides_sensitive_fields_for_public(): void
     {
         $ticket = QueueTicket::factory()->create([
-            'ticket_number'   => 'B002',
-            'display_code'    => 'B002',
-            'customer_name'   => 'John Secret',
-            'customer_phone'  => '+1234567890',
+            'ticket_number' => 'B002',
+            'display_code' => 'B002',
+            'customer_name' => 'John Secret',
+            'customer_phone' => '+1234567890',
         ]);
 
         $this->fakeOpenAi('Status retrieved.');
 
-        $payload          = $this->publicCtx('pub_ticket_session');
+        $payload = $this->publicCtx('pub_ticket_session');
         $payload['message'] = 'Check ticket B002';
 
         $response = $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -380,13 +382,13 @@ class AssistantTest extends TestCase
 
     public function test_public_branch_load_query_is_denied(): void
     {
-        $branch  = Branch::factory()->create();
+        $branch = Branch::factory()->create();
         Counter::factory()->count(3)->create(['branch_id' => $branch->id, 'is_active' => true]);
         ServiceCategory::factory()->count(2)->create(['branch_id' => $branch->id]);
 
         $this->fakeOpenAi('Branch operations data is not available publicly.');
 
-        $payload          = $this->publicCtx('bl_session');
+        $payload = $this->publicCtx('bl_session');
         $payload['message'] = 'How busy is the branch?';
 
         $response = $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -405,7 +407,7 @@ class AssistantTest extends TestCase
 
         $this->fakeOpenAi('Counter operations data is not available publicly.');
 
-        $payload          = $this->publicCtx('cs_session');
+        $payload = $this->publicCtx('cs_session');
         $payload['message'] = 'How many counters are available?';
 
         $response = $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -422,7 +424,7 @@ class AssistantTest extends TestCase
 
         $this->fakeOpenAi('Delay analysis is not available publicly.');
 
-        $payload          = $this->publicCtx('de_session');
+        $payload = $this->publicCtx('de_session');
         $payload['message'] = 'Why is the queue slow?';
 
         $response = $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -437,15 +439,15 @@ class AssistantTest extends TestCase
     {
         $branch = Branch::factory()->create();
         QueuePolicy::factory()->create([
-            'branch_id'   => $branch->id,
-            'name'        => 'Standard Policy',
-            'is_active'   => true,
+            'branch_id' => $branch->id,
+            'name' => 'Standard Policy',
+            'is_active' => true,
             'max_wait_minutes' => 30,
         ]);
 
         $this->fakeOpenAi('Policy details are not available publicly.');
 
-        $payload          = $this->publicCtx('pr_session');
+        $payload = $this->publicCtx('pr_session');
         $payload['message'] = 'What is the queue policy?';
 
         $response = $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -461,13 +463,13 @@ class AssistantTest extends TestCase
         $manager = User::factory()->manager()->create();
         QueueTicket::factory()->count(10)->create([
             'branch_id' => $manager->fresh()->branch_id,
-            'status'    => 'completed',
+            'status' => 'completed',
             'joined_at' => now(),
         ]);
 
         $this->fakeOpenAi('Processed 10 tickets today.');
 
-        $payload          = $this->opsCtx('mgr_reports_session');
+        $payload = $this->opsCtx('mgr_reports_session');
         $payload['message'] = "Show me today's statistics";
 
         $response = $this->actingAs($manager)->postJson('/assistant/respond', $payload)->assertOk();
@@ -488,7 +490,7 @@ class AssistantTest extends TestCase
 
         $this->fakeOpenAi('Reports not available.');
 
-        $payload          = $this->opsCtx('teller_reports_session');
+        $payload = $this->opsCtx('teller_reports_session');
         $payload['message'] = 'Show reports';
 
         $response = $this->actingAs($teller)->postJson('/assistant/respond', $payload)->assertOk();
@@ -514,7 +516,7 @@ class AssistantTest extends TestCase
 
         $this->fakeOpenAi('Full access confirmed.');
 
-        $payload          = $this->opsCtx('admin_session');
+        $payload = $this->opsCtx('admin_session');
         $payload['message'] = 'Show me everything';
 
         $response = $this->actingAs($admin)->postJson('/assistant/respond', $payload)->assertOk();
@@ -530,7 +532,7 @@ class AssistantTest extends TestCase
 
         $this->fakeOpenAi('Report data ready.');
 
-        $payload          = $this->opsCtx('mgr_own_branch_session');
+        $payload = $this->opsCtx('mgr_own_branch_session');
         $payload['message'] = 'Show my branch reports';
 
         $response = $this->actingAs($manager)->postJson('/assistant/respond', $payload)->assertOk();
@@ -550,7 +552,7 @@ class AssistantTest extends TestCase
 
         $this->fakeOpenAi('Limited access.');
 
-        $payload          = $this->opsCtx('teller_log_test');
+        $payload = $this->opsCtx('teller_log_test');
         $payload['message'] = 'Show me the reports';
 
         $this->actingAs($teller)->postJson('/assistant/respond', $payload)->assertOk();
@@ -570,15 +572,16 @@ class AssistantTest extends TestCase
         Http::fake([
             '*/v1/chat/completions' => function ($request) use (&$capturedBody) {
                 $capturedBody = $request->body();
+
                 return Http::response([
                     'choices' => [['message' => ['content' => 'OK']]],
                 ], 200);
             },
         ]);
 
-        $payload                          = $this->publicCtx('redact_session');
-        $payload['message']               = 'Hello';
-        $payload['context']['page']       = [
+        $payload = $this->publicCtx('redact_session');
+        $payload['message'] = 'Hello';
+        $payload['context']['page'] = [
             'component' => 'public/assistant',
             'branch' => [
                 'name' => 'Main Branch',
@@ -595,9 +598,9 @@ class AssistantTest extends TestCase
     public function test_public_ticket_lookup_never_exposes_customer_pii(): void
     {
         QueueTicket::factory()->create([
-            'ticket_number'  => 'C003',
-            'display_code'   => 'C003',
-            'customer_name'  => 'Private Person',
+            'ticket_number' => 'C003',
+            'display_code' => 'C003',
+            'customer_name' => 'Private Person',
             'customer_phone' => '+5559990000',
         ]);
 
@@ -605,13 +608,14 @@ class AssistantTest extends TestCase
         Http::fake([
             '*/v1/chat/completions' => function ($request) use (&$capturedBody) {
                 $capturedBody = $request->body();
+
                 return Http::response([
                     'choices' => [['message' => ['content' => 'Status: waiting']]],
                 ], 200);
             },
         ]);
 
-        $payload          = $this->publicCtx('pii_ticket_session');
+        $payload = $this->publicCtx('pii_ticket_session');
         $payload['message'] = 'Check ticket C003';
 
         $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -666,7 +670,7 @@ class AssistantTest extends TestCase
         $response->assertOk();
         $conversationId = $response->json('conversationId');
 
-        $history = $this->getJson("/assistant/history?session_id=hist_session&scope=public");
+        $history = $this->getJson('/assistant/history?session_id=hist_session&scope=public');
         $history->assertOk();
 
         $messages = $history->json('messages');
@@ -718,7 +722,7 @@ class AssistantTest extends TestCase
     {
         $this->fakeOpenAi('Queue data fetched.');
 
-        $payload          = $this->publicCtx('audit_session');
+        $payload = $this->publicCtx('audit_session');
         $payload['message'] = 'Check ticket A100';
 
         QueueTicket::factory()->create([
@@ -737,7 +741,7 @@ class AssistantTest extends TestCase
     {
         $this->fakeOpenAi('Fast response.');
 
-        $payload          = $this->publicCtx('duration_session');
+        $payload = $this->publicCtx('duration_session');
         $payload['message'] = 'Check ticket A101';
 
         QueueTicket::factory()->create([
@@ -758,7 +762,7 @@ class AssistantTest extends TestCase
     {
         $this->fakeOpenAi('OK');
 
-        $payload          = $this->publicCtx('payload_session');
+        $payload = $this->publicCtx('payload_session');
         $payload['message'] = 'How busy is the branch?';
 
         $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -789,12 +793,12 @@ class AssistantTest extends TestCase
         $this->fakeOpenAi('OK');
 
         for ($i = 0; $i < 20; $i++) {
-            $payload          = $this->publicCtx("rate_session_{$i}");
+            $payload = $this->publicCtx("rate_session_{$i}");
             $payload['message'] = "Message {$i}";
             $this->postJson('/assistant/respond', $payload);
         }
 
-        $payload          = $this->publicCtx('rate_session_overflow');
+        $payload = $this->publicCtx('rate_session_overflow');
         $payload['message'] = 'This should be rate limited';
 
         $this->postJson('/assistant/respond', $payload)->assertStatus(429);
@@ -824,7 +828,7 @@ class AssistantTest extends TestCase
     {
         $this->fakeOpenAi('Ticket not found.');
 
-        $payload          = $this->publicCtx('notfound_session');
+        $payload = $this->publicCtx('notfound_session');
         $payload['message'] = 'Check ticket ZZZ999';
 
         $response = $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -838,15 +842,15 @@ class AssistantTest extends TestCase
 
     public function test_daily_rate_limiter_is_registered(): void
     {
-        $limiter = app(\Illuminate\Cache\RateLimiting\Limit::class);
-        $rateLimiter = app(\Illuminate\Cache\RateLimiter::class);
+        $limiter = app(Limit::class);
+        $rateLimiter = app(RateLimiter::class);
 
         $this->assertNotNull($rateLimiter);
 
         // Verify the named limiter exists by hitting it once and checking it doesn't immediately 429
         $this->fakeOpenAi('OK');
 
-        $payload          = $this->publicCtx('daily_limiter_session');
+        $payload = $this->publicCtx('daily_limiter_session');
         $payload['message'] = 'Hello';
 
         $this->postJson('/assistant/respond', $payload)->assertOk();

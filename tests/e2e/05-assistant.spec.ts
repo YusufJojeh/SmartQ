@@ -78,7 +78,7 @@ test('public assistant input has correct direction attribute', async ({ page }) 
 // ── Operations assistant — access control ────────────────────────────────────
 
 test('unauthenticated user is redirected away from operations assistant', async ({ page }) => {
-    const response = await page.goto('/ai-assistant', { waitUntil: 'networkidle', timeout: 30_000 });
+    await page.goto('/ai-assistant', { waitUntil: 'networkidle', timeout: 30_000 });
 
     // Should redirect to login (3xx or end on /login)
     const url = page.url();
@@ -122,8 +122,8 @@ test('teller assistant shows the read-only indicator', async ({ page }) => {
     await loginAs(page, 'teller@smartq.test');
     await page.goto('/ai-assistant', { waitUntil: 'networkidle', timeout: 30_000 });
 
-    // The "Read-only · Live data" badge should be visible in the panel header
-    await expect(page.getByText(/read.only/i)).toBeVisible({ timeout: 8_000 });
+    // The "Read-only · Live data" badge in the panel header (two elements match, target the first)
+    await expect(page.getByText(/read.only/i).first()).toBeVisible({ timeout: 8_000 });
 });
 
 // ── Operations assistant — manager ───────────────────────────────────────────
@@ -215,7 +215,8 @@ test('public assistant language switcher is visible and functional', async ({ pa
 test('public assistant page includes the SmartQ nav link back to home', async ({ page }) => {
     await page.goto('/assistant', { waitUntil: 'networkidle', timeout: 30_000 });
 
-    // The header logo/link should navigate to the landing page
-    const homeLink = page.locator('header a[href="/"]');
+    // The header SmartQ logo/wordmark link should navigate to the landing page
+    // Using text-based locator since Inertia Links render full URLs not relative paths
+    const homeLink = page.locator('header').getByText('SmartQ').first();
     await expect(homeLink).toBeVisible();
 });

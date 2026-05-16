@@ -1,7 +1,7 @@
-import { Link } from '@inertiajs/react';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { useLocale } from '@/hooks/use-locale';
-import { Layers3, Check } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { Check, Layers3 } from 'lucide-react';
 
 interface AuthLayoutProps {
     children: React.ReactNode;
@@ -16,51 +16,44 @@ export default function AuthSimpleLayout({ children, title, description }: AuthL
         <div className="grid min-h-svh lg:grid-cols-2">
             {/* ── Left column — scene photo panel ── */}
             <div className="relative hidden overflow-hidden lg:flex">
-                <img
-                    src="/assets/auth-scene.jpg"
-                    alt="Branch service hall"
-                    className="absolute inset-0 h-full w-full object-cover"
-                />
+                <img src="/assets/auth-scene.jpg" alt="Branch service hall" className="absolute inset-0 h-full w-full object-cover" />
                 {/* Dark ink overlay with gradient */}
-                <div className="absolute inset-0 bg-gradient-to-b from-ink/70 via-ink/50 to-ink/90" />
-                <div className="absolute inset-0 grid-display opacity-30" />
+                <div className="from-ink/70 via-ink/50 to-ink/90 absolute inset-0 bg-gradient-to-b" />
+                <div className="grid-display absolute inset-0 opacity-30" />
 
                 {/* Panel content */}
-                <div className="relative flex flex-1 flex-col justify-between p-10 text-paper">
+                <div className="text-paper relative flex flex-1 flex-col justify-between p-10">
                     {/* Logo */}
-                    <Link href={route('home')} className="flex items-center gap-2.5 w-fit">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-paper text-ink shadow-elev">
+                    <Link href={route('home')} className="flex w-fit items-center gap-2.5">
+                        <div className="bg-paper text-ink shadow-elev flex h-9 w-9 items-center justify-center rounded-xl">
                             <Layers3 className="h-4 w-4" />
                         </div>
-                        <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-paper">SmartQ</span>
+                        <span className="text-paper font-mono text-[11px] tracking-[0.22em] uppercase">SmartQ</span>
                     </Link>
 
                     {/* Hero text */}
                     <div className="space-y-6">
                         <div className="space-y-1">
-                            <div className="inline-flex items-center gap-2 rounded-full bg-paper/10 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.18em] text-paper/70 mb-4">
-                                <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+                            <div className="bg-paper/10 text-paper/70 mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1 font-mono text-[10px] tracking-[0.18em] uppercase">
+                                <span className="bg-accent h-1.5 w-1.5 animate-pulse rounded-full" />
                                 {t('auth.sideBadge')}
                             </div>
                             <h2 className="font-display text-4xl leading-tight">
-                                {t('auth.sideTitleLine1')}<br />
-                                <em className="font-normal italic text-paper/70">{t('auth.sideTitleLine2')}</em>
+                                {t('auth.sideTitleLine1')}
+                                <br />
+                                <em className="text-paper/70 font-normal italic">{t('auth.sideTitleLine2')}</em>
                             </h2>
                         </div>
 
-                        <blockquote className="border-l-2 border-accent/40 pl-4">
-                            <p className="text-sm leading-relaxed text-paper/75">
-                                {t('auth.quote')}
-                            </p>
-                            <footer className="mt-2 text-xs text-paper/45">
-                                {t('auth.quoteBy')}
-                            </footer>
+                        <blockquote className="border-accent/40 border-l-2 pl-4">
+                            <p className="text-paper/75 text-sm leading-relaxed">{t('auth.quote')}</p>
+                            <footer className="text-paper/45 mt-2 text-xs">{t('auth.quoteBy')}</footer>
                         </blockquote>
 
                         <ul className="space-y-2">
                             {[t('auth.statsServed'), t('auth.statsWait'), t('auth.statsSatisfaction')].map((item) => (
-                                <li key={item} className="flex items-center gap-2 text-sm text-paper/80">
-                                    <Check className="h-4 w-4 text-accent shrink-0" />
+                                <li key={item} className="text-paper/80 flex items-center gap-2 text-sm">
+                                    <Check className="text-accent h-4 w-4 shrink-0" />
                                     {item}
                                 </li>
                             ))}
@@ -74,9 +67,9 @@ export default function AuthSimpleLayout({ children, title, description }: AuthL
                             { v: '60%', k: t('auth.statsWait') },
                             { v: '97%', k: t('auth.statsSatisfaction') },
                         ].map((s) => (
-                            <div key={s.k} className="rounded-xl glass-ink px-3 py-3">
-                                <div className="font-display text-2xl text-paper">{s.v}</div>
-                                <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-paper/50 mt-1">{s.k}</div>
+                            <div key={s.k} className="glass-ink rounded-xl px-3 py-3">
+                                <div className="font-display text-paper text-2xl">{s.v}</div>
+                                <div className="text-paper/50 mt-1 font-mono text-[9px] tracking-[0.18em] uppercase">{s.k}</div>
                             </div>
                         ))}
                     </div>
@@ -84,31 +77,29 @@ export default function AuthSimpleLayout({ children, title, description }: AuthL
             </div>
 
             {/* ── Right column — form ── */}
-            <div className="flex flex-col items-center justify-center bg-paper px-6 py-12 sm:px-10">
+            <div className="bg-paper flex flex-col items-center justify-center px-6 py-12 sm:px-10">
                 {/* Mobile logo + lang switcher */}
                 <div className="mb-8 flex w-full max-w-sm items-center justify-between lg:hidden">
                     <Link href={route('home')} className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-ink text-paper">
+                        <div className="bg-ink text-paper flex h-8 w-8 items-center justify-center rounded-xl">
                             <Layers3 className="h-4 w-4" />
                         </div>
-                        <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink">SmartQ</span>
+                        <span className="text-ink font-mono text-[11px] tracking-[0.22em] uppercase">SmartQ</span>
                     </Link>
                     <LanguageSwitcher compact />
                 </div>
 
                 <div className="w-full max-w-sm">
                     {/* Top — desktop lang switcher */}
-                    <div className="hidden lg:flex justify-end mb-6">
+                    <div className="mb-6 hidden justify-end lg:flex">
                         <LanguageSwitcher compact />
                     </div>
 
                     {/* Form card */}
-                    <div className="rounded-2xl hairline bg-card p-8 shadow-soft">
+                    <div className="hairline bg-card shadow-soft rounded-2xl p-8">
                         <div className="mb-7 space-y-1.5">
-                            <h1 className="font-display text-2xl text-ink">{title}</h1>
-                            {description && (
-                                <p className="text-sm text-muted-foreground">{description}</p>
-                            )}
+                            <h1 className="font-display text-ink text-2xl">{title}</h1>
+                            {description && <p className="text-muted-foreground text-sm">{description}</p>}
                         </div>
                         {children}
                     </div>

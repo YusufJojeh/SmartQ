@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\QueueTicket;
 use App\Models\ServiceCategory;
 use App\Services\QueueService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -38,10 +39,10 @@ class TicketController extends Controller
             ->pluck('total', 'status');
 
         return Inertia::render('queue/index', [
-            'snapshot'   => $snapshot,
+            'snapshot' => $snapshot,
             'todayStats' => $todayStats,
-            'branches'   => $user->isSuperAdmin() ? Branch::active()->select('id', 'name', 'code')->get() : [],
-            'branchId'   => $branchId,
+            'branches' => $user->isSuperAdmin() ? Branch::active()->select('id', 'name', 'code')->get() : [],
+            'branchId' => $branchId,
         ]);
     }
 
@@ -59,7 +60,7 @@ class TicketController extends Controller
             : $branches->first();
 
         return Inertia::render('public/join-queue', [
-            'branches'       => $branches,
+            'branches' => $branches,
             'selectedBranch' => $selectedBranch,
         ]);
     }
@@ -67,9 +68,9 @@ class TicketController extends Controller
     /**
      * Process the queue join form (public, rate-limited).
      */
-    public function join(IssueTicketRequest $request): \Illuminate\Http\RedirectResponse
+    public function join(IssueTicketRequest $request): RedirectResponse
     {
-        $branch   = Branch::findOrFail($request->validated('branch_id'));
+        $branch = Branch::findOrFail($request->validated('branch_id'));
         $category = ServiceCategory::findOrFail($request->validated('service_category_id'));
 
         abort_if(! $branch->is_active, 422, 'Branch is not currently accepting tickets.');
@@ -109,10 +110,10 @@ class TicketController extends Controller
             ->get();
 
         return Inertia::render('public/track-ticket', [
-            'ticket'       => $this->toPublicTrackingTicket($ticket),
-            'position'     => $position,
+            'ticket' => $this->toPublicTrackingTicket($ticket),
+            'position' => $position,
             'waitingCount' => $waitingCount,
-            'nowServing'   => $nowServing->map(fn (QueueTicket $servingTicket) => $this->toPublicServingTicket($servingTicket))->values()->all(),
+            'nowServing' => $nowServing->map(fn (QueueTicket $servingTicket) => $this->toPublicServingTicket($servingTicket))->values()->all(),
         ]);
     }
 

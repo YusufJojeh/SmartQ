@@ -19,6 +19,7 @@ test('teller can call, start, and complete the next ticket', async ({ page }) =>
 
     await page.getByRole('button', { name: /complete/i }).click();
 
-    await expect(page.getByText(/idle - no active customer/i)).toBeVisible();
+    // Text changed to em-dash: "Idle — No Active Customer"
+    await expect(page.getByText(/idle.{1,5}no active customer/i)).toBeVisible();
     await expect(page.getByTestId('active-ticket-code')).toHaveCount(0);
 });

@@ -87,15 +87,7 @@ export interface ServiceCategory {
     is_active: boolean;
 }
 
-export type TicketStatus =
-    | 'waiting'
-    | 'notified'
-    | 'called'
-    | 'in_service'
-    | 'on_hold'
-    | 'completed'
-    | 'cancelled'
-    | 'missed';
+export type TicketStatus = 'waiting' | 'notified' | 'called' | 'in_service' | 'on_hold' | 'completed' | 'cancelled' | 'missed';
 
 export interface QueueTicket {
     id: number;

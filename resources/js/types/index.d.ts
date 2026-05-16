@@ -107,15 +107,7 @@ export interface QueueTicket {
     counter?: Counter;
 }
 
-export type TicketStatus =
-    | 'waiting'
-    | 'notified'
-    | 'called'
-    | 'in_service'
-    | 'on_hold'
-    | 'completed'
-    | 'cancelled'
-    | 'missed';
+export type TicketStatus = 'waiting' | 'notified' | 'called' | 'in_service' | 'on_hold' | 'completed' | 'cancelled' | 'missed';
 
 export type UserRole = 'super_admin' | 'manager' | 'teller' | 'customer';
 

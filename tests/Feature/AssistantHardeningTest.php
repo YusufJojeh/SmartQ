@@ -2,15 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\AssistantToolCall;
 use App\Models\AuditLog;
 use App\Models\Branch;
-use App\Models\Counter;
 use App\Models\NotificationLog;
 use App\Models\QueueTicket;
-use App\Models\ServiceCategory;
 use App\Models\User;
+use App\Services\Assistant\AssistantContextBuilder;
 use App\Services\Assistant\AssistantToolRegistry;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -31,7 +32,7 @@ class AssistantHardeningTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+        $this->withoutMiddleware(ValidateCsrfToken::class);
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
@@ -51,10 +52,10 @@ class AssistantHardeningTest extends TestCase
         return [
             'message' => 'test',
             'context' => [
-                'scope'      => 'operations',
-                'url'        => '/ai-assistant',
-                'route'      => 'ai-assistant',
-                'locale'     => 'en',
+                'scope' => 'operations',
+                'url' => '/ai-assistant',
+                'route' => 'ai-assistant',
+                'locale' => 'en',
                 'session_id' => $sessionId,
             ],
         ];
@@ -65,10 +66,10 @@ class AssistantHardeningTest extends TestCase
         return [
             'message' => 'test',
             'context' => [
-                'scope'      => 'public',
-                'url'        => '/assistant',
-                'route'      => 'assistant.public',
-                'locale'     => 'en',
+                'scope' => 'public',
+                'url' => '/assistant',
+                'route' => 'assistant.public',
+                'locale' => 'en',
                 'session_id' => $sessionId,
             ],
         ];
@@ -89,12 +90,12 @@ class AssistantHardeningTest extends TestCase
         // Create tickets on branch2 only — teller should NOT see them
         QueueTicket::factory()->count(3)->create([
             'branch_id' => $branch2->id,
-            'status'    => 'waiting',
+            'status' => 'waiting',
         ]);
 
         $this->fakeOpenAi('Queue data.');
 
-        $payload            = $this->opsCtx('branch_iso_teller');
+        $payload = $this->opsCtx('branch_iso_teller');
         $payload['message'] = 'How many waiting?';
         // Inject branch2 into page context — this must be ignored for branch resolution
         $payload['context']['page'] = ['branch' => ['id' => $branch2->id]];
@@ -110,17 +111,17 @@ class AssistantHardeningTest extends TestCase
         $contextBranch1 = [
             'user_role' => 'teller',
             'branch_id' => $branch1->id,
-            'scope'     => 'operations',
+            'scope' => 'operations',
         ];
         $contextBranch2 = [
             'user_role' => 'teller',
             'branch_id' => $branch2->id,
-            'scope'     => 'operations',
+            'scope' => 'operations',
         ];
 
         // For teller: even if input has branch2's id, resolved branch is always context branch
         $resultWithBranch2Input = $registry->execute('queue.status', ['branch_id' => $branch2->id], $contextBranch1);
-        $resultNoBranchInput    = $registry->execute('queue.status', [], $contextBranch1);
+        $resultNoBranchInput = $registry->execute('queue.status', [], $contextBranch1);
 
         // Both should return branch1's counts (0 waiting there) since branch isolation ignores input
         $this->assertSame($resultWithBranch2Input['currently_waiting'], $resultNoBranchInput['currently_waiting'],
@@ -140,7 +141,7 @@ class AssistantHardeningTest extends TestCase
         // Branch2 has lots of tickets — manager should NOT see them
         QueueTicket::factory()->count(10)->create([
             'branch_id' => $branch2->id,
-            'status'    => 'waiting',
+            'status' => 'waiting',
         ]);
 
         $registry = app(AssistantToolRegistry::class);
@@ -148,7 +149,7 @@ class AssistantHardeningTest extends TestCase
         $context = [
             'user_role' => 'manager',
             'branch_id' => $branch1->id,
-            'scope'     => 'operations',
+            'scope' => 'operations',
         ];
 
         // Attempt to inject branch2 via input — must be ignored
@@ -166,7 +167,7 @@ class AssistantHardeningTest extends TestCase
         // 5 tickets on branch2
         QueueTicket::factory()->count(5)->create([
             'branch_id' => $branch2->id,
-            'status'    => 'waiting',
+            'status' => 'waiting',
         ]);
 
         $registry = app(AssistantToolRegistry::class);
@@ -174,7 +175,7 @@ class AssistantHardeningTest extends TestCase
         $context = [
             'user_role' => 'super_admin',
             'branch_id' => $branch1->id, // super admin's "home" branch (if any)
-            'scope'     => 'operations',
+            'scope' => 'operations',
         ];
 
         // Super admin explicitly queries branch2 via input
@@ -195,7 +196,7 @@ class AssistantHardeningTest extends TestCase
 
         $this->actingAs($teller);
 
-        $builder = app(\App\Services\Assistant\AssistantContextBuilder::class);
+        $builder = app(AssistantContextBuilder::class);
         $context = $builder->build(['scope' => 'operations']);
 
         $this->assertArrayHasKey('branch_name', $context);
@@ -207,7 +208,7 @@ class AssistantHardeningTest extends TestCase
         $admin = User::factory()->superAdmin()->create(['branch_id' => null]);
         $this->actingAs($admin);
 
-        $builder = app(\App\Services\Assistant\AssistantContextBuilder::class);
+        $builder = app(AssistantContextBuilder::class);
         $context = $builder->build(['scope' => 'operations']);
 
         $this->assertArrayHasKey('branch_name', $context);
@@ -216,7 +217,7 @@ class AssistantHardeningTest extends TestCase
 
     public function test_context_branch_name_is_null_for_guest(): void
     {
-        $builder = app(\App\Services\Assistant\AssistantContextBuilder::class);
+        $builder = app(AssistantContextBuilder::class);
         $context = $builder->build(['scope' => 'public']);
 
         $this->assertArrayHasKey('branch_name', $context);
@@ -231,7 +232,7 @@ class AssistantHardeningTest extends TestCase
     {
         $this->fakeOpenAi('Notifications not available publicly.');
 
-        $payload            = $this->publicCtx('notif_public_session');
+        $payload = $this->publicCtx('notif_public_session');
         $payload['message'] = 'Show notification stats';
 
         $response = $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -252,7 +253,7 @@ class AssistantHardeningTest extends TestCase
 
         $this->fakeOpenAi('Not available.');
 
-        $payload            = $this->opsCtx('notif_teller_session');
+        $payload = $this->opsCtx('notif_teller_session');
         $payload['message'] = 'How are notifications today?';
 
         $response = $this->actingAs($teller)
@@ -271,21 +272,21 @@ class AssistantHardeningTest extends TestCase
     public function test_manager_can_access_notifications_summary_for_own_branch(): void
     {
         $manager = User::factory()->manager()->create();
-        $branch  = Branch::where('id', $manager->fresh()->branch_id)->first();
+        $branch = Branch::where('id', $manager->fresh()->branch_id)->first();
 
         // Create some notification logs for the branch
         $ticket = QueueTicket::factory()->create(['branch_id' => $branch->id]);
         NotificationLog::create([
             'queue_ticket_id' => $ticket->id,
-            'channel'         => 'in_app',
-            'type'            => 'turn_approaching',
-            'status'          => 'sent',
-            'sent_at'         => now(),
+            'channel' => 'in_app',
+            'type' => 'turn_approaching',
+            'status' => 'sent',
+            'sent_at' => now(),
         ]);
 
         $this->fakeOpenAi('Notification summary ready.');
 
-        $payload            = $this->opsCtx('notif_manager_session');
+        $payload = $this->opsCtx('notif_manager_session');
         $payload['message'] = 'Show notification stats today';
 
         $response = $this->actingAs($manager)
@@ -320,7 +321,7 @@ class AssistantHardeningTest extends TestCase
         $registry = app(AssistantToolRegistry::class);
 
         $context = ['user_role' => 'manager', 'branch_id' => $branch1->id, 'scope' => 'operations'];
-        $result  = $registry->execute('notifications.summary', [], $context);
+        $result = $registry->execute('notifications.summary', [], $context);
 
         $this->assertEquals(3, $result['total'],
             'notifications.summary must only return notifications for the manager\'s branch');
@@ -338,7 +339,7 @@ class AssistantHardeningTest extends TestCase
     {
         $this->fakeOpenAi('Audit not available publicly.');
 
-        $payload            = $this->publicCtx('audit_public_session');
+        $payload = $this->publicCtx('audit_public_session');
         $payload['message'] = 'Show audit log';
 
         $response = $this->postJson('/assistant/respond', $payload)->assertOk();
@@ -357,7 +358,7 @@ class AssistantHardeningTest extends TestCase
 
         $this->fakeOpenAi('Not available.');
 
-        $payload            = $this->opsCtx('audit_teller_session');
+        $payload = $this->opsCtx('audit_teller_session');
         $payload['message'] = 'Show audit log';
 
         $response = $this->actingAs($teller)
@@ -378,7 +379,7 @@ class AssistantHardeningTest extends TestCase
 
         $this->fakeOpenAi('Not available.');
 
-        $payload            = $this->opsCtx('audit_manager_session');
+        $payload = $this->opsCtx('audit_manager_session');
         $payload['message'] = 'Show audit log';
 
         $response = $this->actingAs($manager)
@@ -400,17 +401,17 @@ class AssistantHardeningTest extends TestCase
 
         // Create some audit log entries
         AuditLog::create([
-            'user_id'      => $admin->id,
-            'action'       => 'branch.created',
+            'user_id' => $admin->id,
+            'action' => 'branch.created',
             'subject_type' => 'App\\Models\\Branch',
-            'subject_id'   => 1,
-            'ip_address'   => '127.0.0.1',
-            'created_at'   => now(),
+            'subject_id' => 1,
+            'ip_address' => '127.0.0.1',
+            'created_at' => now(),
         ]);
 
         $this->fakeOpenAi('Audit summary ready.');
 
-        $payload            = $this->opsCtx('audit_admin_session');
+        $payload = $this->opsCtx('audit_admin_session');
         $payload['message'] = 'Show recent audit activity';
 
         $response = $this->actingAs($admin)
@@ -431,19 +432,19 @@ class AssistantHardeningTest extends TestCase
         $admin = User::factory()->superAdmin()->create();
 
         AuditLog::create([
-            'user_id'      => $admin->id,
-            'action'       => 'user.updated',
+            'user_id' => $admin->id,
+            'action' => 'user.updated',
             'subject_type' => 'App\\Models\\User',
-            'subject_id'   => 99,
-            'old_values'   => ['email' => 'old@test.com', 'name' => 'Old Name'],
-            'new_values'   => ['email' => 'new@test.com', 'name' => 'New Name'],
-            'ip_address'   => '192.168.1.1',
-            'user_agent'   => 'Mozilla/5.0 Test Browser',
-            'created_at'   => now(),
+            'subject_id' => 99,
+            'old_values' => ['email' => 'old@test.com', 'name' => 'Old Name'],
+            'new_values' => ['email' => 'new@test.com', 'name' => 'New Name'],
+            'ip_address' => '192.168.1.1',
+            'user_agent' => 'Mozilla/5.0 Test Browser',
+            'created_at' => now(),
         ]);
 
         $registry = app(AssistantToolRegistry::class);
-        $context  = ['user_role' => 'super_admin', 'branch_id' => null, 'scope' => 'operations'];
+        $context = ['user_role' => 'super_admin', 'branch_id' => null, 'scope' => 'operations'];
 
         $result = $registry->execute('audit.summary', [], $context);
 
@@ -465,7 +466,7 @@ class AssistantHardeningTest extends TestCase
 
         // Simulate what would happen if guard somehow missed a non-super-admin call
         $context = ['user_role' => 'manager', 'branch_id' => 1, 'scope' => 'operations'];
-        $result  = $registry->execute('audit.summary', [], $context);
+        $result = $registry->execute('audit.summary', [], $context);
 
         $this->assertArrayHasKey('error', $result,
             'audit.summary must return an error for non-super-admin even if called directly');
@@ -497,7 +498,7 @@ class AssistantHardeningTest extends TestCase
             ], 200),
         ]);
 
-        $payload            = $this->opsCtx('user1_secret_session');
+        $payload = $this->opsCtx('user1_secret_session');
         $payload['message'] = 'Sensitive question';
 
         $response = $this->actingAs($user1)
@@ -527,12 +528,12 @@ class AssistantHardeningTest extends TestCase
 
         $this->fakeOpenAi('OK');
 
-        $payload            = $this->opsCtx('notif_log_teller');
+        $payload = $this->opsCtx('notif_log_teller');
         $payload['message'] = 'Show me notification stats';
 
         $this->actingAs($teller)->postJson('/assistant/respond', $payload)->assertOk();
 
-        $denied = \App\Models\AssistantToolCall::where('tool_name', 'notifications.summary')
+        $denied = AssistantToolCall::where('tool_name', 'notifications.summary')
             ->where('status', 'denied')
             ->exists();
 
@@ -548,19 +549,19 @@ class AssistantHardeningTest extends TestCase
 
         $this->fakeOpenAi('Audit ready.');
 
-        $payload            = $this->opsCtx('audit_log_admin');
+        $payload = $this->opsCtx('audit_log_admin');
         $payload['message'] = 'Show audit activity';
 
         $this->actingAs($admin)->postJson('/assistant/respond', $payload)->assertOk();
 
-        $auditCall = \App\Models\AssistantToolCall::where('tool_name', 'audit.summary')
+        $auditCall = AssistantToolCall::where('tool_name', 'audit.summary')
             ->where('status', 'success')
             ->latest()
             ->first();
 
         if ($auditCall) {
             $this->assertEquals('super_admin',
-                \App\Models\User::find($auditCall->user_id)?->roles->first()?->name ?? 'super_admin',
+                User::find($auditCall->user_id)?->roles->first()?->name ?? 'super_admin',
             );
         }
         // Tool may not have been routed if keyword didn't match — no assertion required

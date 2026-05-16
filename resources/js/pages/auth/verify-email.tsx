@@ -23,9 +23,7 @@ export default function VerifyEmail({ status }: { status?: string }) {
             <Head title={t('auth.emailVerificationHead')} />
 
             {status === 'verification-link-sent' && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {t('auth.verificationLinkSent')}
-                </div>
+                <div className="mb-4 text-center text-sm font-medium text-green-600">{t('auth.verificationLinkSent')}</div>
             )}
 
             <form onSubmit={submit} className="space-y-6 text-center">

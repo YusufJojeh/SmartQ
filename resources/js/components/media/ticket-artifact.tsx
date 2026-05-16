@@ -6,14 +6,5 @@ interface TicketArtifactProps extends PropsWithChildren {
 }
 
 export function TicketArtifact({ children, className }: TicketArtifactProps) {
-    return (
-        <div
-            className={cn(
-                'overflow-hidden rounded-2xl hairline bg-card shadow-elev',
-                className,
-            )}
-        >
-            {children}
-        </div>
-    );
+    return <div className={cn('hairline bg-card shadow-elev overflow-hidden rounded-2xl', className)}>{children}</div>;
 }

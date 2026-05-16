@@ -9,7 +9,6 @@ use App\Events\TicketJoined;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Counter;
-use App\Models\QueueTicket;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Services\QueueService;
@@ -24,9 +23,13 @@ class QueueBroadcastTest extends TestCase
     use RefreshDatabase;
 
     private QueueService $queueService;
+
     private Branch $branch;
+
     private ServiceCategory $service;
+
     private Counter $counter;
+
     private User $teller;
 
     protected function setUp(): void
@@ -64,6 +67,7 @@ class QueueBroadcastTest extends TestCase
 
         Event::assertDispatched(TicketJoined::class, function (TicketJoined $event) {
             $channels = $event->broadcastOn();
+
             return count($channels) === 1
                 && $channels[0]->name === "branch.{$this->branch->id}";
         });
@@ -78,6 +82,7 @@ class QueueBroadcastTest extends TestCase
         Event::assertDispatched(TicketJoined::class, function (TicketJoined $event) {
             $payload = $event->broadcastWith();
             $json = json_encode($payload);
+
             return ! str_contains($json, 'Secret Name')
                 && ! str_contains($json, '+1234567890');
         });

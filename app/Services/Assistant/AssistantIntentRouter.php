@@ -18,16 +18,16 @@ class AssistantIntentRouter
      */
     public function route(string $message, array $context): array
     {
-        $lower    = mb_strtolower($message);
+        $lower = mb_strtolower($message);
         $branchId = $context['branch_id'] ?? null;
-        $scope    = $context['scope'] ?? 'public';
-        $tools    = [];
-        $seen     = [];
+        $scope = $context['scope'] ?? 'public';
+        $tools = [];
+        $seen = [];
 
         $add = function (string $toolName, array $input = []) use (&$tools, &$seen) {
-            if (!in_array($toolName, $seen, true)) {
-                $tools[]  = ['tool' => $toolName, 'input' => $input];
-                $seen[]   = $toolName;
+            if (! in_array($toolName, $seen, true)) {
+                $tools[] = ['tool' => $toolName, 'input' => $input];
+                $seen[] = $toolName;
             }
         };
 
@@ -79,7 +79,7 @@ class AssistantIntentRouter
             // Arabic
             'تقرير', 'ملخص', 'إحصاء', 'إحصائيات', 'يومي', 'أسبوعي', 'ذروة', 'أداء',
         ])) {
-            $period      = $this->extractPeriod($lower);
+            $period = $this->extractPeriod($lower);
             $reportInput = array_filter(['branch_id' => $branchId, 'period' => $period]);
             $add('reports.summary', $reportInput);
         }
@@ -150,6 +150,7 @@ class AssistantIntentRouter
                 return true;
             }
         }
+
         return false;
     }
 
@@ -185,6 +186,7 @@ class AssistantIntentRouter
         if ($this->matches($lower, ['week', 'weekly', 'this week', 'last 7', '7 days', 'أسبوع', 'أسبوعي'])) {
             return 'weekly';
         }
+
         return 'daily';
     }
 }

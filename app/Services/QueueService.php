@@ -37,20 +37,20 @@ class QueueService
                 ->lockForUpdate()
                 ->count() + 1;
 
-            $ticketNumber = $category->prefix . str_pad($sequence, 3, '0', STR_PAD_LEFT);
+            $ticketNumber = $category->prefix.str_pad($sequence, 3, '0', STR_PAD_LEFT);
 
             $ticket = QueueTicket::create([
-                'branch_id'           => $branch->id,
+                'branch_id' => $branch->id,
                 'service_category_id' => $category->id,
-                'ticket_number'       => $ticketNumber,
-                'display_code'        => $ticketNumber,
-                'sequence_number'     => $sequence,
-                'customer_name'       => $customerName,
-                'customer_phone'      => $customerPhone,
-                'priority_level'      => $priorityLevel,
-                'priority_reason'     => $priorityReason,
-                'status'              => 'waiting',
-                'joined_at'           => now(),
+                'ticket_number' => $ticketNumber,
+                'display_code' => $ticketNumber,
+                'sequence_number' => $sequence,
+                'customer_name' => $customerName,
+                'customer_phone' => $customerPhone,
+                'priority_level' => $priorityLevel,
+                'priority_reason' => $priorityReason,
+                'status' => 'waiting',
+                'joined_at' => now(),
                 'estimated_wait_minutes' => $this->estimateWaitTime($branch->id, $category->id),
             ]);
 
@@ -90,10 +90,10 @@ class QueueService
 
             $oldStatus = $ticket->status;
             $ticket->update([
-                'status'     => 'called',
-                'teller_id'  => $teller->id,
+                'status' => 'called',
+                'teller_id' => $teller->id,
                 'counter_id' => $teller->counter_id,
-                'called_at'  => now(),
+                'called_at' => now(),
             ]);
 
             $this->recordStatusChange($ticket, $oldStatus, 'called', $teller->id);
@@ -144,15 +144,15 @@ class QueueService
             $this->ensureTicketOwnership($ticket, $teller);
             abort_if(! in_array($ticket->status, ['in_service', 'on_hold']), 422, 'Cannot complete ticket in current status.');
 
-            $completedAt  = now();
-            $actualWait   = $ticket->called_at ? (int) $ticket->joined_at->diffInMinutes($ticket->called_at) : null;
+            $completedAt = now();
+            $actualWait = $ticket->called_at ? (int) $ticket->joined_at->diffInMinutes($ticket->called_at) : null;
             $actualService = $ticket->service_started_at ? (int) $ticket->service_started_at->diffInMinutes($completedAt) : null;
-            $oldStatus    = $ticket->status;
+            $oldStatus = $ticket->status;
 
             $ticket->update([
-                'status'               => 'completed',
-                'completed_at'         => $completedAt,
-                'actual_wait_minutes'  => $actualWait,
+                'status' => 'completed',
+                'completed_at' => $completedAt,
+                'actual_wait_minutes' => $actualWait,
                 'actual_service_minutes' => $actualService,
             ]);
 
@@ -273,8 +273,8 @@ class QueueService
             ->get();
 
         return [
-            'waiting'       => $active->whereIn('status', ['waiting', 'notified'])->values(),
-            'in_service'    => $active->whereIn('status', ['called', 'in_service', 'on_hold'])->values(),
+            'waiting' => $active->whereIn('status', ['waiting', 'notified'])->values(),
+            'in_service' => $active->whereIn('status', ['called', 'in_service', 'on_hold'])->values(),
             'waiting_count' => $active->whereIn('status', ['waiting', 'notified'])->count(),
             'serving_count' => $active->whereIn('status', ['called', 'in_service'])->count(),
         ];
@@ -289,11 +289,11 @@ class QueueService
     ): void {
         QueueTicketStatusHistory::create([
             'queue_ticket_id' => $ticket->id,
-            'changed_by'      => $changedBy,
-            'from_status'     => $from,
-            'to_status'       => $to,
-            'reason'          => $reason,
-            'changed_at'      => now(),
+            'changed_by' => $changedBy,
+            'from_status' => $from,
+            'to_status' => $to,
+            'reason' => $reason,
+            'changed_at' => now(),
         ]);
     }
 

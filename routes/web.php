@@ -8,9 +8,10 @@ use App\Http\Controllers\Management\CounterController;
 use App\Http\Controllers\Management\ServiceCategoryController;
 use App\Http\Controllers\Management\UserController;
 use App\Http\Controllers\Queue\PublicDisplayController;
-use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\Queue\TellerConsoleController;
 use App\Http\Controllers\Queue\TicketController;
+use App\Http\Controllers\ReportsController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -56,7 +57,7 @@ Route::middleware(['auth', 'verified', 'active.user', 'staff.user'])->group(func
     Route::get('/reports', ReportsController::class)->name('reports.index');
     Route::get('/reports/export', [ReportsController::class, 'export'])->name('reports.export');
     Route::get('/audit-logs', AuditLogController::class)->name('audit-logs.index');
-    Route::get('/settings', function (\Illuminate\Http\Request $request) {
+    Route::get('/settings', function (Request $request) {
         abort_unless($request->user()?->hasPermissionTo('settings.view'), 403);
 
         return Inertia::render('settings/index');

@@ -120,7 +120,7 @@ class QueueTicket extends Model
     public function scopeByPriority($query)
     {
         return $query->orderBy('priority_level', 'asc')
-                     ->orderBy('joined_at', 'asc');
+            ->orderBy('joined_at', 'asc');
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────
@@ -148,10 +148,10 @@ class QueueTicket extends Model
             ->waiting()
             ->where(function ($q) {
                 $q->where('priority_level', '<', $this->priority_level)
-                  ->orWhere(function ($q2) {
-                      $q2->where('priority_level', $this->priority_level)
-                         ->where('joined_at', '<', $this->joined_at);
-                  });
+                    ->orWhere(function ($q2) {
+                        $q2->where('priority_level', $this->priority_level)
+                            ->where('joined_at', '<', $this->joined_at);
+                    });
             })
             ->count() + 1;
     }

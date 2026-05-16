@@ -9,7 +9,7 @@ export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
         <>
             {groups.map((group) => (
                 <SidebarGroup key={group.title} className="px-2 py-0">
-                    <SidebarGroupLabel className="text-sidebar-foreground/50 text-[11px] font-semibold uppercase tracking-widest">
+                    <SidebarGroupLabel className="text-sidebar-foreground/50 text-[11px] font-semibold tracking-widest uppercase">
                         {group.title}
                     </SidebarGroupLabel>
                     <SidebarMenu>
@@ -26,9 +26,7 @@ export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
                                     </Link>
                                 </SidebarMenuButton>
                                 {item.badge !== undefined && (
-                                    <SidebarMenuBadge className="bg-primary/10 text-primary text-xs font-semibold">
-                                        {item.badge}
-                                    </SidebarMenuBadge>
+                                    <SidebarMenuBadge className="bg-primary/10 text-primary text-xs font-semibold">{item.badge}</SidebarMenuBadge>
                                 )}
                             </SidebarMenuItem>
                         ))}

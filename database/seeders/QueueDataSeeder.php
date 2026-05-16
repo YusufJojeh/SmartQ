@@ -40,7 +40,7 @@ class QueueDataSeeder extends Seeder
             }
             $sequences[$category->id]++;
 
-            $ticketNum = $prefix . str_pad($sequences[$category->id], 3, '0', STR_PAD_LEFT);
+            $ticketNum = $prefix.str_pad($sequences[$category->id], 3, '0', STR_PAD_LEFT);
 
             QueueTicket::create([
                 'branch_id' => $branch->id,
@@ -61,7 +61,7 @@ class QueueDataSeeder extends Seeder
         $servingCategory = $categories->first();
         $teller = $tellers->first();
         $sequences[$servingCategory->id] = ($sequences[$servingCategory->id] ?? 0) + 1;
-        $ticketNum = $servingCategory->prefix . str_pad($sequences[$servingCategory->id], 3, '0', STR_PAD_LEFT);
+        $ticketNum = $servingCategory->prefix.str_pad($sequences[$servingCategory->id], 3, '0', STR_PAD_LEFT);
 
         $servingTicket = QueueTicket::create([
             'branch_id' => $branch->id,
@@ -115,7 +115,7 @@ class QueueDataSeeder extends Seeder
                 $serviceStartedAt = $calledAt->copy()->addMinutes(1);
                 $completedAt = $serviceStartedAt->copy()->addMinutes($serviceMinutes);
 
-                $ticketNum = $category->prefix . str_pad($i, 3, '0', STR_PAD_LEFT);
+                $ticketNum = $category->prefix.str_pad($i, 3, '0', STR_PAD_LEFT);
 
                 $status = rand(0, 10) > 1 ? 'completed' : (rand(0, 1) ? 'missed' : 'cancelled');
 
@@ -124,7 +124,7 @@ class QueueDataSeeder extends Seeder
                     'service_category_id' => $category->id,
                     'teller_id' => $teller->id,
                     'counter_id' => $teller->counter_id,
-                    'ticket_number' => $ticketNum . "_d{$day}",
+                    'ticket_number' => $ticketNum."_d{$day}",
                     'display_code' => $ticketNum,
                     'sequence_number' => $i,
                     'customer_name' => fake()->name(),

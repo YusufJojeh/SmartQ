@@ -1,32 +1,12 @@
-import {
-    BarChart3,
-    Building2,
-    ClipboardList,
-    Cpu,
-    LayoutGrid,
-    Monitor,
-    Settings,
-    Tags,
-    Ticket,
-    Users,
-} from 'lucide-react';
+import { useLocale } from '@/hooks/use-locale';
+import { type NavGroup, type NavItem } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
+import { BarChart3, Building2, ClipboardList, Cpu, LayoutGrid, Monitor, Settings, Tags, Ticket, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 import { NavFooter } from './nav-footer';
 import { NavMain } from './nav-main';
 import { NavUser } from './nav-user';
-import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-} from './ui/sidebar';
-import { type NavGroup, type NavItem } from '@/types';
-import { usePage } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
-import { useLocale } from '@/hooks/use-locale';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from './ui/sidebar';
 
 function useRole() {
     const { auth } = usePage<{ auth: { user: { roles?: string[] } } }>().props;
@@ -113,9 +93,7 @@ export function AppSidebar() {
         );
     }
 
-    const navGroups: NavGroup[] = [
-        { title: t('nav.queueOperations'), items: queueItems },
-    ];
+    const navGroups: NavGroup[] = [{ title: t('nav.queueOperations'), items: queueItems }];
 
     if (managementItems.length > 0) {
         navGroups.push({ title: t('nav.management'), items: managementItems });

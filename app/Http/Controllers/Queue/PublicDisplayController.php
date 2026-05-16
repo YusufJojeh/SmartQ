@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Queue;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\QueueTicket;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,13 +31,13 @@ class PublicDisplayController extends Controller
             ->get();
 
         $todayStats = [
-            'total'     => QueueTicket::forBranch($branch->id)->today()->count(),
+            'total' => QueueTicket::forBranch($branch->id)->today()->count(),
             'completed' => QueueTicket::forBranch($branch->id)->today()->where('status', 'completed')->count(),
-            'waiting'   => QueueTicket::forBranch($branch->id)->waiting()->count(),
+            'waiting' => QueueTicket::forBranch($branch->id)->waiting()->count(),
         ];
 
         return Inertia::render('public/display', [
-            'branch'     => [
+            'branch' => [
                 'id' => $branch->id,
                 'name' => $branch->name,
                 'code' => $branch->code,
@@ -56,7 +55,7 @@ class PublicDisplayController extends Controller
                     'code' => $ticket->counter->code,
                 ] : null,
             ])->values()->all(),
-            'nextUp'     => $nextUp->map(fn (QueueTicket $ticket) => [
+            'nextUp' => $nextUp->map(fn (QueueTicket $ticket) => [
                 'id' => $ticket->id,
                 'display_code' => $ticket->display_code,
                 'service_category' => $ticket->serviceCategory ? [

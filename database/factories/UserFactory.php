@@ -3,13 +3,14 @@
 namespace Database\Factories;
 
 use App\Models\Branch;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
@@ -18,12 +19,12 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name'              => fake()->name(),
-            'email'             => fake()->unique()->safeEmail(),
+            'name' => fake()->name(),
+            'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password'          => static::$password ??= Hash::make('password'),
-            'remember_token'    => Str::random(10),
-            'is_active'         => true,
+            'password' => static::$password ??= Hash::make('password'),
+            'remember_token' => Str::random(10),
+            'is_active' => true,
         ];
     }
 
@@ -54,7 +55,7 @@ class UserFactory extends Factory
             $role = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'web']);
             $user->assignRole($role);
 
-            if (!$user->branch_id) {
+            if (! $user->branch_id) {
                 $branch = Branch::factory()->create();
                 $user->update(['branch_id' => $branch->id]);
             }

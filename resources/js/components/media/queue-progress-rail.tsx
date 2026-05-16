@@ -18,9 +18,7 @@ export function QueueProgressRail({ status, className }: QueueProgressRailProps)
                 return (
                     <div key={step} className="flex items-center gap-3">
                         <div className={cn('h-3 w-3 rounded-full', active ? 'bg-white' : 'bg-white/20')} />
-                        <div className={cn('text-sm capitalize', active ? 'text-white' : 'text-white/40')}>
-                            {step.replace('_', ' ')}
-                        </div>
+                        <div className={cn('text-sm capitalize', active ? 'text-white' : 'text-white/40')}>{step.replace('_', ' ')}</div>
                     </div>
                 );
             })}

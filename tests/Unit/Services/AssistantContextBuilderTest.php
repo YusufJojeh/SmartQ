@@ -114,7 +114,7 @@ class AssistantContextBuilderTest extends TestCase
     public function test_includes_branch_name_for_user_with_branch(): void
     {
         $branch = Branch::factory()->create(['name' => 'Riyadh Flagship Branch']);
-        $user   = User::factory()->manager()->create(['branch_id' => $branch->id]);
+        $user = User::factory()->manager()->create(['branch_id' => $branch->id]);
         $this->actingAs($user);
 
         $context = $this->builder->build(['scope' => 'operations']);

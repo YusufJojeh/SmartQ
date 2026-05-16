@@ -1,6 +1,6 @@
-import { Head, useForm } from '@inertiajs/react';
 import { FormDataConvertible } from '@inertiajs/core';
-import { LoaderCircle, LogIn, Mail, Lock } from 'lucide-react';
+import { Head, useForm } from '@inertiajs/react';
+import { LoaderCircle, Lock, LogIn, Mail } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
 import InputError from '@/components/input-error';
@@ -54,7 +54,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 <div className="space-y-1.5">
                     <Label htmlFor="email">{t('auth.email')}</Label>
                     <div className="relative">
-                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Mail className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                         <Input
                             id="email"
                             type="email"
@@ -83,7 +83,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         )}
                     </div>
                     <div className="relative">
-                        <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                         <Input
                             id="password"
                             type="password"
@@ -114,20 +114,10 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 </div>
 
                 {/* Submit */}
-                <Button
-                    type="submit"
-                    className="h-11 w-full gap-2 text-base font-semibold"
-                    tabIndex={4}
-                    disabled={processing}
-                >
-                    {processing ? (
-                        <LoaderCircle className="h-4 w-4 animate-spin" />
-                    ) : (
-                        <LogIn className="h-4 w-4" />
-                    )}
+                <Button type="submit" className="h-11 w-full gap-2 text-base font-semibold" tabIndex={4} disabled={processing}>
+                    {processing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
                     {processing ? t('auth.signingIn') : t('auth.signIn')}
                 </Button>
-
             </form>
         </AuthLayout>
     );

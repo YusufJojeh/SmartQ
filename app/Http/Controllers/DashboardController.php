@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Branch;
 use App\Models\QueueTicket;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,7 +12,7 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request): Response
     {
-        $user     = $request->user();
+        $user = $request->user();
         abort_unless(
             $user && ($user->hasPermissionTo('ticket.view') || $user->hasPermissionTo('report.view')),
             403
@@ -24,8 +22,8 @@ class DashboardController extends Controller
         $ticketsQuery = QueueTicket::query()->when($branchId, fn ($q) => $q->forBranch($branchId));
 
         // KPI metrics
-        $todayTotal   = (clone $ticketsQuery)->today()->count();
-        $todayDone    = (clone $ticketsQuery)->today()->where('status', 'completed')->count();
+        $todayTotal = (clone $ticketsQuery)->today()->count();
+        $todayDone = (clone $ticketsQuery)->today()->where('status', 'completed')->count();
         $todayWaiting = (clone $ticketsQuery)->today()->whereIn('status', ['waiting', 'notified'])->count();
         $todayServing = (clone $ticketsQuery)->today()->whereIn('status', ['called', 'in_service'])->count();
 
@@ -74,24 +72,24 @@ class DashboardController extends Controller
                 ->with(['assignedTickets' => fn ($q) => $q->today()->where('status', 'completed')])
                 ->get()
                 ->map(fn ($t) => [
-                    'name'      => $t->name,
+                    'name' => $t->name,
                     'completed' => $t->assignedTickets->count(),
-                    'avg_time'  => round($t->assignedTickets->avg('actual_service_minutes') ?? 0, 1),
+                    'avg_time' => round($t->assignedTickets->avg('actual_service_minutes') ?? 0, 1),
                 ])
             : collect();
 
         return Inertia::render('dashboard', [
             'metrics' => [
-                'today_total'   => $todayTotal,
-                'today_done'    => $todayDone,
+                'today_total' => $todayTotal,
+                'today_done' => $todayDone,
                 'today_waiting' => $todayWaiting,
                 'today_serving' => $todayServing,
-                'avg_wait'      => round((float) $avgWait, 1),
-                'avg_service'   => round((float) $avgService, 1),
+                'avg_wait' => round((float) $avgWait, 1),
+                'avg_service' => round((float) $avgService, 1),
             ],
-            'dailyVolume'      => $dailyVolume,
-            'statusBreakdown'  => $statusBreakdown,
-            'topServices'      => $topServices,
+            'dailyVolume' => $dailyVolume,
+            'statusBreakdown' => $statusBreakdown,
+            'topServices' => $topServices,
             'tellerPerformance' => $tellerPerformance,
         ]);
     }

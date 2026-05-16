@@ -7,10 +7,7 @@ interface StatusDot {
     pulse: boolean;
 }
 
-const STATUS_CONFIG: Record<
-    TicketStatus,
-    { labelKey: string; className: string; dot: StatusDot }
-> = {
+const STATUS_CONFIG: Record<TicketStatus, { labelKey: string; className: string; dot: StatusDot }> = {
     waiting: {
         labelKey: 'status.waiting',
         className: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:ring-blue-900/40',
@@ -84,19 +81,13 @@ export function TicketStatusBadge({ status, className, showDot = true, size = 'm
                     {config.dot.pulse && (
                         <span
                             className={cn(
-                                'absolute inline-flex rounded-full opacity-75 animate-ping',
+                                'absolute inline-flex animate-ping rounded-full opacity-75',
                                 config.dot.color,
                                 size === 'lg' ? 'h-2.5 w-2.5' : 'h-2 w-2',
                             )}
                         />
                     )}
-                    <span
-                        className={cn(
-                            'relative inline-flex rounded-full',
-                            config.dot.color,
-                            size === 'lg' ? 'h-2.5 w-2.5' : 'h-2 w-2',
-                        )}
-                    />
+                    <span className={cn('relative inline-flex rounded-full', config.dot.color, size === 'lg' ? 'h-2.5 w-2.5' : 'h-2 w-2')} />
                 </span>
             )}
             {t(config.labelKey)}

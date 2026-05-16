@@ -3,10 +3,10 @@ import { FormEventHandler, useRef } from 'react';
 
 // Components...
 import InputError from '@/components/input-error';
-import { useLocale } from '@/hooks/use-locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLocale } from '@/hooks/use-locale';
 
 import HeadingSmall from '@/components/heading-small';
 
@@ -48,9 +48,7 @@ export default function DeleteUser() {
                     </DialogTrigger>
                     <DialogContent>
                         <DialogTitle>{t('settings.deleteConfirmTitle')}</DialogTitle>
-                        <DialogDescription>
-                            {t('settings.deleteConfirmDescription')}
-                        </DialogDescription>
+                        <DialogDescription>{t('settings.deleteConfirmDescription')}</DialogDescription>
                         <form className="space-y-6" onSubmit={deleteUser}>
                             <div className="grid gap-2">
                                 <Label htmlFor="password" className="sr-only">

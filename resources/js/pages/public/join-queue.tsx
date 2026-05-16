@@ -1,24 +1,12 @@
+import InputError from '@/components/input-error';
+import { LanguageSwitcher } from '@/components/language-switcher';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import InputError from '@/components/input-error';
-import { LanguageSwitcher } from '@/components/language-switcher';
 import { useLocale } from '@/hooks/use-locale';
 import { type Branch, type ServiceCategory } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
-import {
-    ArrowRight,
-    Building2,
-    Check,
-    ChevronRight,
-    Clock,
-    Layers,
-    Loader2,
-    MapPin,
-    Tag,
-    Ticket,
-    Users,
-} from 'lucide-react';
+import { ArrowRight, Building2, Check, ChevronRight, Clock, Layers, Loader2, MapPin, Tag, Ticket, Users } from 'lucide-react';
 import { useState } from 'react';
 
 interface Props {
@@ -54,28 +42,28 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
                                     isComplete
                                         ? 'bg-ink text-paper'
                                         : isCurrent
-                                        ? 'border-2 border-accent bg-accent-soft text-accent'
-                                        : 'hairline bg-paper text-muted-foreground'
+                                          ? 'border-accent bg-accent-soft text-accent border-2'
+                                          : 'hairline bg-paper text-muted-foreground'
                                 }`}
                             >
-                                {isComplete ? (
-                                    <Check className="h-4 w-4" />
-                                ) : (
-                                    <Icon className="h-4 w-4" />
-                                )}
+                                {isComplete ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                             </div>
-                            <span className={`mt-1.5 font-mono text-[9px] uppercase tracking-[0.18em] ${
-                                isCurrent ? 'text-accent' : isComplete ? 'text-ink' : 'text-muted-foreground'
-                            }`}>
+                            <span
+                                className={`mt-1.5 font-mono text-[9px] tracking-[0.18em] uppercase ${
+                                    isCurrent ? 'text-accent' : isComplete ? 'text-ink' : 'text-muted-foreground'
+                                }`}
+                            >
                                 {t(step.labelKey)}
                             </span>
                         </div>
 
                         {/* Connector line */}
                         {idx < STEP_CONFIG.length - 1 && (
-                            <div className={`mx-2 mb-4 h-0.5 w-10 sm:w-16 rounded-full transition-colors ${
-                                idx < currentIdx ? 'bg-ink' : 'bg-hairline'
-                            }`} />
+                            <div
+                                className={`mx-2 mb-4 h-0.5 w-10 rounded-full transition-colors sm:w-16 ${
+                                    idx < currentIdx ? 'bg-ink' : 'bg-hairline'
+                                }`}
+                            />
                         )}
                     </div>
                 );
@@ -126,13 +114,12 @@ export default function JoinQueue({ branches, selectedBranch: initialBranch }: P
     return (
         <>
             <Head title={t('join.head')} />
-            <div className="min-h-screen bg-background">
-
+            <div className="bg-background min-h-screen">
                 {/* Header */}
-                <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-md">
+                <header className="bg-background/80 sticky top-0 z-10 border-b backdrop-blur-md">
                     <div className="mx-auto flex h-14 max-w-lg items-center justify-between gap-2.5 px-4">
                         <div className="flex items-center gap-2.5">
-                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-md shadow-primary/30">
+                            <div className="bg-primary shadow-primary/30 flex h-7 w-7 items-center justify-center rounded-lg shadow-md">
                                 <Layers className="h-4 w-4 text-white" />
                             </div>
                             <span className="font-bold tracking-tight">SmartQ</span>
@@ -142,7 +129,6 @@ export default function JoinQueue({ branches, selectedBranch: initialBranch }: P
                 </header>
 
                 <div className="mx-auto max-w-lg px-4 py-8">
-
                     {/* Step indicator */}
                     <div className="mb-8 flex justify-center">
                         <StepIndicator currentStep={step} />
@@ -150,16 +136,16 @@ export default function JoinQueue({ branches, selectedBranch: initialBranch }: P
 
                     {/* ── Step 1: Branch ── */}
                     {step === 'branch' && (
-                        <div className="space-y-5 page-enter">
+                        <div className="page-enter space-y-5">
                             <div>
                                 <h1 className="text-xl font-semibold">{t('join.selectBranch')}</h1>
-                                <p className="mt-1 text-sm text-muted-foreground">{t('join.selectBranchDescription')}</p>
+                                <p className="text-muted-foreground mt-1 text-sm">{t('join.selectBranchDescription')}</p>
                             </div>
 
                             {branches.length === 0 ? (
                                 <div className="rounded-xl border border-dashed p-8 text-center">
-                                    <Building2 className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" />
-                                    <p className="text-sm font-medium text-muted-foreground">{t('join.noBranches')}</p>
+                                    <Building2 className="text-muted-foreground/30 mx-auto mb-3 h-10 w-10" />
+                                    <p className="text-muted-foreground text-sm font-medium">{t('join.noBranches')}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-2.5" role="list" aria-label={t('join.availableBranches')}>
@@ -170,24 +156,26 @@ export default function JoinQueue({ branches, selectedBranch: initialBranch }: P
                                             role="listitem"
                                             aria-label={t('join.selectBranchAria', { name: b.name, city: b.city })}
                                             onClick={() => selectBranch(b)}
-                                            className="group w-full rounded-xl border bg-card p-4 text-start transition-all hover:border-primary hover:shadow-sm hover:shadow-primary/5 focus:outline-none focus:ring-2 focus:ring-ring"
+                                            className="group bg-card hover:border-primary hover:shadow-primary/5 focus:ring-ring w-full rounded-xl border p-4 text-start transition-all hover:shadow-sm focus:ring-2 focus:outline-none"
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/20">
-                                                    <Building2 className="h-5 w-5 text-primary" />
+                                                <div className="bg-primary/10 group-hover:bg-primary/20 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors">
+                                                    <Building2 className="text-primary h-5 w-5" />
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-semibold truncate">{b.name}</div>
-                                                    <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="truncate font-semibold">{b.name}</div>
+                                                    <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
                                                         <MapPin className="h-3 w-3 shrink-0" />
-                                                        <span className="truncate">{b.city} — {b.address}</span>
+                                                        <span className="truncate">
+                                                            {b.city} — {b.address}
+                                                        </span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 shrink-0 ml-2">
-                                                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                                <div className="ml-2 flex shrink-0 items-center gap-2">
+                                                    <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
                                                         {t('join.servicesCount', { count: b.service_categories.filter((c) => c.is_active).length })}
                                                     </span>
-                                                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                                    <ChevronRight className="text-muted-foreground group-hover:text-primary h-4 w-4 transition-colors" />
                                                 </div>
                                             </div>
                                         </button>
@@ -199,24 +187,24 @@ export default function JoinQueue({ branches, selectedBranch: initialBranch }: P
 
                     {/* ── Step 2: Service ── */}
                     {step === 'service' && branch && (
-                        <div className="space-y-5 page-enter">
+                        <div className="page-enter space-y-5">
                             <div>
                                 <button
                                     type="button"
                                     onClick={() => setStep('branch')}
-                                    className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                    className="text-muted-foreground hover:text-foreground mb-1.5 flex items-center gap-1 text-xs transition-colors"
                                 >
                                     <ChevronRight className={`h-3 w-3 ${direction === 'ltr' ? 'rotate-180' : ''}`} />
                                     {branch.name}
                                 </button>
                                 <h1 className="text-xl font-semibold">{t('join.selectService')}</h1>
-                                <p className="mt-1 text-sm text-muted-foreground">{t('join.selectServiceDescription')}</p>
+                                <p className="text-muted-foreground mt-1 text-sm">{t('join.selectServiceDescription')}</p>
                             </div>
 
                             {activeCategories.length === 0 ? (
                                 <div className="rounded-xl border border-dashed p-8 text-center">
-                                    <Tag className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" />
-                                    <p className="text-sm font-medium text-muted-foreground">{t('join.noServices')}</p>
+                                    <Tag className="text-muted-foreground/30 mx-auto mb-3 h-10 w-10" />
+                                    <p className="text-muted-foreground text-sm font-medium">{t('join.noServices')}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-2.5" role="list" aria-label={t('join.availableServices')}>
@@ -227,21 +215,21 @@ export default function JoinQueue({ branches, selectedBranch: initialBranch }: P
                                             role="listitem"
                                             aria-label={t('join.selectServiceAria', { name: cat.name, minutes: cat.estimated_service_minutes })}
                                             onClick={() => selectCategory(cat)}
-                                            className="group w-full rounded-xl border bg-card p-4 text-start transition-all hover:border-primary hover:shadow-sm hover:shadow-primary/5 focus:outline-none focus:ring-2 focus:ring-ring"
+                                            className="group bg-card hover:border-primary hover:shadow-primary/5 focus:ring-ring w-full rounded-xl border p-4 text-start transition-all hover:shadow-sm focus:ring-2 focus:outline-none"
                                         >
                                             <div className="flex items-center gap-3">
                                                 {/* Prefix circle */}
-                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-bold text-primary text-base transition-colors group-hover:bg-primary group-hover:text-white">
+                                                <div className="bg-primary/10 text-primary group-hover:bg-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-bold transition-colors group-hover:text-white">
                                                     {cat.prefix}
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-semibold truncate">{cat.name}</div>
-                                                    <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="truncate font-semibold">{cat.name}</div>
+                                                    <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
                                                         <Clock className="h-3 w-3 shrink-0" />
                                                         {t('join.estimated', { minutes: cat.estimated_service_minutes })}
                                                     </div>
                                                 </div>
-                                                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-primary transition-colors" />
+                                                <ChevronRight className="text-muted-foreground group-hover:text-primary h-4 w-4 shrink-0 transition-colors" />
                                             </div>
                                         </button>
                                     ))}
@@ -252,33 +240,31 @@ export default function JoinQueue({ branches, selectedBranch: initialBranch }: P
 
                     {/* ── Step 3: Details ── */}
                     {step === 'details' && branch && selectedCategory && (
-                        <div className="space-y-5 page-enter">
+                        <div className="page-enter space-y-5">
                             <div>
                                 <button
                                     type="button"
                                     onClick={() => setStep('service')}
-                                    className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                    className="text-muted-foreground hover:text-foreground mb-1.5 flex items-center gap-1 text-xs transition-colors"
                                 >
                                     <ChevronRight className={`h-3 w-3 ${direction === 'ltr' ? 'rotate-180' : ''}`} />
                                     {selectedCategory.name}
                                 </button>
                                 <h1 className="text-xl font-semibold">{t('join.almostThere')}</h1>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    {t('join.detailsDescription')}
-                                </p>
+                                <p className="text-muted-foreground mt-1 text-sm">{t('join.detailsDescription')}</p>
                             </div>
 
                             {/* Summary card */}
-                            <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3.5">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                                    <Ticket className="h-4 w-4 text-primary" />
+                            <div className="border-primary/20 bg-primary/5 flex items-center gap-3 rounded-xl border px-4 py-3.5">
+                                <div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                                    <Ticket className="text-primary h-4 w-4" />
                                 </div>
-                                <div className="text-sm min-w-0">
+                                <div className="min-w-0 text-sm">
                                     <span className="font-semibold">{branch.name}</span>
-                                    <span className="mx-1.5 text-muted-foreground">·</span>
+                                    <span className="text-muted-foreground mx-1.5">·</span>
                                     <span className="text-muted-foreground">{selectedCategory.name}</span>
                                 </div>
-                                <div className="ml-auto shrink-0 flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                                <div className="bg-primary/10 text-primary ml-auto flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold">
                                     <Clock className="h-3 w-3" />
                                     {t('common.minutesShort', { count: selectedCategory.estimated_service_minutes })}
                                 </div>
@@ -287,7 +273,9 @@ export default function JoinQueue({ branches, selectedBranch: initialBranch }: P
                             {/* Form */}
                             <form onSubmit={submit} className="space-y-4">
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="customer_name">{t('join.yourName')} <span className="text-muted-foreground">({t('common.optional')})</span></Label>
+                                    <Label htmlFor="customer_name">
+                                        {t('join.yourName')} <span className="text-muted-foreground">({t('common.optional')})</span>
+                                    </Label>
                                     <Input
                                         id="customer_name"
                                         placeholder={t('join.namePlaceholder')}
@@ -299,7 +287,9 @@ export default function JoinQueue({ branches, selectedBranch: initialBranch }: P
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="customer_phone">{t('join.phoneNumber')} <span className="text-muted-foreground">({t('common.optional')})</span></Label>
+                                    <Label htmlFor="customer_phone">
+                                        {t('join.phoneNumber')} <span className="text-muted-foreground">({t('common.optional')})</span>
+                                    </Label>
                                     <Input
                                         id="customer_phone"
                                         placeholder={t('join.phonePlaceholder')}
@@ -313,12 +303,7 @@ export default function JoinQueue({ branches, selectedBranch: initialBranch }: P
 
                                 <InputError message={errors.branch_id ?? errors.service_category_id} />
 
-                                <Button
-                                    type="submit"
-                                    className="mt-2 w-full gap-2 text-base font-semibold"
-                                    size="lg"
-                                    disabled={processing}
-                                >
+                                <Button type="submit" className="mt-2 w-full gap-2 text-base font-semibold" size="lg" disabled={processing}>
                                     {processing ? (
                                         <>
                                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -332,9 +317,7 @@ export default function JoinQueue({ branches, selectedBranch: initialBranch }: P
                                     )}
                                 </Button>
 
-                                <p className="text-center text-xs text-muted-foreground">
-                                    {t('join.fairPolicy')}
-                                </p>
+                                <p className="text-muted-foreground text-center text-xs">{t('join.fairPolicy')}</p>
                             </form>
                         </div>
                     )}

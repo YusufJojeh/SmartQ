@@ -36,12 +36,8 @@ export function redactValue(value: unknown): unknown {
  * Call this inside a React component body (not inside an event handler)
  * and pass the result down to event handlers.
  */
-export function buildAssistantContext(
-    pageProps: SharedData,
-    component: string,
-    overrides?: Partial<AssistantContext>,
-): AssistantContext {
-    const user   = pageProps.auth?.user;
+export function buildAssistantContext(pageProps: SharedData, component: string, overrides?: Partial<AssistantContext>): AssistantContext {
+    const user = pageProps.auth?.user;
     const locale = (pageProps.locale as 'en' | 'ar') || 'en';
     const scope: 'public' | 'operations' = user ? 'operations' : 'public';
 
@@ -58,11 +54,7 @@ export function buildAssistantContext(
     return context;
 }
 
-function buildMinimalPageContext(
-    pageProps: SharedData,
-    component: string,
-    scope: 'public' | 'operations',
-): Record<string, unknown> {
+function buildMinimalPageContext(pageProps: SharedData, component: string, scope: 'public' | 'operations'): Record<string, unknown> {
     const context: Record<string, unknown> = {
         component,
         route: component,
@@ -95,9 +87,7 @@ function buildMinimalPageContext(
     if (filters) {
         context.filters = redactValue(
             Object.fromEntries(
-                Object.entries(filters).filter(([, value]) =>
-                    ['string', 'number', 'boolean'].includes(typeof value) || value === null,
-                ),
+                Object.entries(filters).filter(([, value]) => ['string', 'number', 'boolean'].includes(typeof value) || value === null),
             ),
         );
     }
@@ -106,9 +96,7 @@ function buildMinimalPageContext(
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-    return typeof value === 'object' && value !== null && !Array.isArray(value)
-        ? (value as Record<string, unknown>)
-        : null;
+    return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
 function toNullableNumber(value: unknown): number | null {

@@ -12,7 +12,7 @@ export function SceneShell({ children, className, tone = 'light' }: SceneShellPr
             className={cn(
                 'relative overflow-hidden',
                 tone === 'light' && 'bg-paper text-ink bg-gradient-paper',
-                tone === 'dark'  && 'bg-ink text-paper bg-gradient-ink',
+                tone === 'dark' && 'bg-ink text-paper bg-gradient-ink',
                 tone === 'display' && 'bg-display-bg text-display-fg grid-display',
                 className,
             )}

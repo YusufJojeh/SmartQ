@@ -52,15 +52,19 @@ export default function AuditLogsIndex({ logs, filters, actionOptions, userOptio
     const submitFilters = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        router.get(route('audit-logs.index'), {
-            search,
-            action: action === 'all' ? '' : action,
-            user_id: userId === 'all' ? '' : userId,
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            route('audit-logs.index'),
+            {
+                search,
+                action: action === 'all' ? '' : action,
+                user_id: userId === 'all' ? '' : userId,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const resetFilters = () => {
@@ -68,11 +72,15 @@ export default function AuditLogsIndex({ logs, filters, actionOptions, userOptio
         setAction('all');
         setUserId('all');
 
-        router.get(route('audit-logs.index'), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            route('audit-logs.index'),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     return (
@@ -81,10 +89,10 @@ export default function AuditLogsIndex({ logs, filters, actionOptions, userOptio
             <div className="flex flex-col gap-6 p-6">
                 <div>
                     <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-                        <ClipboardList className="h-6 w-6 text-primary" />
+                        <ClipboardList className="text-primary h-6 w-6" />
                         Audit Logs
                     </h1>
-                    <p className="text-sm text-muted-foreground">All sensitive operational actions</p>
+                    <p className="text-muted-foreground text-sm">All sensitive operational actions</p>
                 </div>
 
                 <Card>
@@ -94,7 +102,11 @@ export default function AuditLogsIndex({ logs, filters, actionOptions, userOptio
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <form className="grid gap-3 md:grid-cols-4" onSubmit={submitFilters}>
-                            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search action, actor, subject, or IP" />
+                            <Input
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                placeholder="Search action, actor, subject, or IP"
+                            />
                             <Select value={action} onValueChange={setAction}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="All actions" />
@@ -123,7 +135,9 @@ export default function AuditLogsIndex({ logs, filters, actionOptions, userOptio
                             </Select>
                             <div className="flex gap-2">
                                 <Button type="submit">Apply</Button>
-                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" variant="outline" onClick={resetFilters}>
+                                    Reset
+                                </Button>
                             </div>
                         </form>
 
@@ -143,21 +157,17 @@ export default function AuditLogsIndex({ logs, filters, actionOptions, userOptio
                                     {logs.data.map((log) => (
                                         <TableRow key={log.id}>
                                             <TableCell>
-                                                <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs">
+                                                <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">
                                                     {ACTION_LABEL[log.action] ?? log.action}
                                                 </span>
                                             </TableCell>
                                             <TableCell className="text-sm">{log.user?.name ?? 'System'}</TableCell>
-                                            <TableCell className="text-xs text-muted-foreground">
+                                            <TableCell className="text-muted-foreground text-xs">
                                                 {log.subject_type ? `${log.subject_type.split('\\').pop()} #${log.subject_id}` : '-'}
                                             </TableCell>
-                                            <TableCell className="max-w-xs text-xs text-muted-foreground">
-                                                {describeChanges(log)}
-                                            </TableCell>
-                                            <TableCell className="font-mono text-xs text-muted-foreground">
-                                                {log.ip_address ?? '-'}
-                                            </TableCell>
-                                            <TableCell className="text-xs text-muted-foreground">
+                                            <TableCell className="text-muted-foreground max-w-xs text-xs">{describeChanges(log)}</TableCell>
+                                            <TableCell className="text-muted-foreground font-mono text-xs">{log.ip_address ?? '-'}</TableCell>
+                                            <TableCell className="text-muted-foreground text-xs">
                                                 {new Date(log.created_at).toLocaleString('en-US', {
                                                     month: 'short',
                                                     day: 'numeric',

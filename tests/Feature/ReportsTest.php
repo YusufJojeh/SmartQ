@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Branch;
 use App\Models\AuditLog;
+use App\Models\Branch;
 use App\Models\QueuePolicy;
 use App\Models\QueueTicket;
 use App\Models\ServiceCategory;

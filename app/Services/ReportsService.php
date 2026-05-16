@@ -186,8 +186,8 @@ class ReportsService
         $dailyVolume = $ticketCollection
             ->groupBy(fn ($t) => substr($t['joined_at'] ?? '', 0, 10))
             ->map(fn ($group, $date) => [
-                'date'      => $date,
-                'total'     => $group->count(),
+                'date' => $date,
+                'total' => $group->count(),
                 'completed' => $group->where('status', 'completed')->count(),
             ])
             ->sortBy('date')
@@ -200,8 +200,8 @@ class ReportsService
             ->filter(fn ($t) => ($t['teller'] ?? '') !== '')
             ->groupBy('teller')
             ->map(fn ($group, $name) => [
-                'name'             => $name,
-                'completed'        => $group->count(),
+                'name' => $name,
+                'completed' => $group->count(),
                 'avg_service_time' => round((float) ($group->avg('actual_service_minutes') ?? 0), 1),
             ])
             ->sortByDesc('completed')
@@ -209,26 +209,26 @@ class ReportsService
             ->all();
 
         // Metrics summary
-        $completed  = $ticketCollection->where('status', 'completed');
-        $total      = $ticketCollection->count();
+        $completed = $ticketCollection->where('status', 'completed');
+        $total = $ticketCollection->count();
         $metrics = [
-            'total_tickets'        => $total,
-            'completed_tickets'    => $completed->count(),
-            'completion_rate'      => $total > 0 ? round($completed->count() / $total * 100, 1) : 0,
-            'avg_wait_minutes'     => round((float) ($completed->avg('actual_wait_minutes') ?? 0), 1),
-            'avg_service_minutes'  => round((float) ($completed->avg('actual_service_minutes') ?? 0), 1),
+            'total_tickets' => $total,
+            'completed_tickets' => $completed->count(),
+            'completion_rate' => $total > 0 ? round($completed->count() / $total * 100, 1) : 0,
+            'avg_wait_minutes' => round((float) ($completed->avg('actual_wait_minutes') ?? 0), 1),
+            'avg_service_minutes' => round((float) ($completed->avg('actual_service_minutes') ?? 0), 1),
         ];
 
         return [
-            'branch_id'   => $branchId,
-            'dateRange'   => [
+            'branch_id' => $branchId,
+            'dateRange' => [
                 'from' => $from->toDateString(),
-                'to'   => $to->toDateString(),
+                'to' => $to->toDateString(),
             ],
-            'tickets'     => $tickets,
+            'tickets' => $tickets,
             'dailyVolume' => $dailyVolume,
             'tellerStats' => $tellerStats,
-            'metrics'     => $metrics,
+            'metrics' => $metrics,
         ];
     }
 }

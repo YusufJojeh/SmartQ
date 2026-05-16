@@ -35,8 +35,8 @@ class QueueTicketFactory extends Factory
         return [
             'branch_id' => Branch::factory(),
             'service_category_id' => ServiceCategory::factory(),
-            'ticket_number' => $prefix . str_pad($seq, 3, '0', STR_PAD_LEFT),
-            'display_code' => $prefix . str_pad($seq, 3, '0', STR_PAD_LEFT),
+            'ticket_number' => $prefix.str_pad($seq, 3, '0', STR_PAD_LEFT),
+            'display_code' => $prefix.str_pad($seq, 3, '0', STR_PAD_LEFT),
             'sequence_number' => $seq,
             'customer_name' => $this->faker->optional(0.7)->name(),
             'customer_phone' => $this->faker->optional(0.5)->phoneNumber(),

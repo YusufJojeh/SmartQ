@@ -14,12 +14,12 @@ export default function SettingsIndex() {
             <div className="flex flex-col gap-6 p-6">
                 <div>
                     <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-                        <Settings className="h-6 w-6 text-primary" />
+                        <Settings className="text-primary h-6 w-6" />
                         {t('settings.title')}
                     </h1>
-                    <p className="text-sm text-muted-foreground">{t('settings.systemDescription')}</p>
+                    <p className="text-muted-foreground text-sm">{t('settings.systemDescription')}</p>
                 </div>
-                <p className="text-sm text-muted-foreground">{t('settings.comingSoon')}</p>
+                <p className="text-muted-foreground text-sm">{t('settings.comingSoon')}</p>
             </div>
         </AppLayout>
     );

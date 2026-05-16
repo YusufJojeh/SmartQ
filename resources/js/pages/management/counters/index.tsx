@@ -1,6 +1,6 @@
-import { EmptyState } from '@/components/empty-state';
 import { ConfirmDialog } from '@/components/dialogs/confirm-dialog';
 import CounterDialog from '@/components/dialogs/counter-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { PaginationLinks } from '@/components/pagination-links';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -63,15 +63,19 @@ export default function CountersIndex({ counters, branches, canCreate, filters }
     const applyFilters = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        router.get(route('counters.index'), {
-            search,
-            status: status === 'all' ? '' : status,
-            branch_id: branchId === 'all' ? '' : branchId,
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            route('counters.index'),
+            {
+                search,
+                status: status === 'all' ? '' : status,
+                branch_id: branchId === 'all' ? '' : branchId,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const resetFilters = () => {
@@ -79,11 +83,15 @@ export default function CountersIndex({ counters, branches, canCreate, filters }
         setStatus('all');
         setBranchId('all');
 
-        router.get(route('counters.index'), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            route('counters.index'),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const confirmDelete = () => {
@@ -134,10 +142,10 @@ export default function CountersIndex({ counters, branches, canCreate, filters }
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-                            <Monitor className="h-6 w-6 text-primary" />
+                            <Monitor className="text-primary h-6 w-6" />
                             {t('management.countersTitle')}
                         </h1>
-                        <p className="text-sm text-muted-foreground">{t('management.countersDescription')}</p>
+                        <p className="text-muted-foreground text-sm">{t('management.countersDescription')}</p>
                     </div>
                     {canCreate ? (
                         <Button className="gap-2" onClick={openCreate}>
@@ -180,7 +188,9 @@ export default function CountersIndex({ counters, branches, canCreate, filters }
                             </Select>
                             <div className="flex gap-2">
                                 <Button type="submit">Apply</Button>
-                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" variant="outline" onClick={resetFilters}>
+                                    Reset
+                                </Button>
                             </div>
                         </form>
                         {counters.data.length === 0 ? (
@@ -205,14 +215,16 @@ export default function CountersIndex({ counters, branches, canCreate, filters }
                                     {counters.data.map((counter) => (
                                         <TableRow key={counter.id}>
                                             <TableCell className="font-medium">{counter.name}</TableCell>
-                                            <TableCell className="font-mono text-sm text-muted-foreground">{counter.code}</TableCell>
+                                            <TableCell className="text-muted-foreground font-mono text-sm">{counter.code}</TableCell>
                                             <TableCell className="text-sm">{counter.branch?.name ?? '-'}</TableCell>
                                             <TableCell>
                                                 <Badge
                                                     variant="outline"
-                                                    className={counter.is_active
-                                                        ? 'border-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                        : 'border-0 bg-gray-100 text-gray-600'}
+                                                    className={
+                                                        counter.is_active
+                                                            ? 'border-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                            : 'border-0 bg-gray-100 text-gray-600'
+                                                    }
                                                 >
                                                     {counter.is_active ? t('common.active') : t('common.inactive')}
                                                 </Badge>
@@ -225,12 +237,17 @@ export default function CountersIndex({ counters, branches, canCreate, filters }
                                                         </Button>
                                                     ) : null}
                                                     {counter.can_delete ? (
-                                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => setDeleteTarget(counter)}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-red-500 hover:text-red-700"
+                                                            onClick={() => setDeleteTarget(counter)}
+                                                        >
                                                             {t('common.delete')}
                                                         </Button>
                                                     ) : null}
                                                     {!counter.can_update && !counter.can_delete ? (
-                                                        <span className="text-sm text-muted-foreground">-</span>
+                                                        <span className="text-muted-foreground text-sm">-</span>
                                                     ) : null}
                                                 </div>
                                             </TableCell>

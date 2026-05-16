@@ -1,11 +1,11 @@
-import { EmptyState } from '@/components/empty-state';
 import BranchDialog from '@/components/dialogs/branch-dialog';
 import { ConfirmDialog } from '@/components/dialogs/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
+import { PaginationLinks } from '@/components/pagination-links';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { PaginationLinks } from '@/components/pagination-links';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useLocale } from '@/hooks/use-locale';
@@ -62,25 +62,33 @@ export default function BranchesIndex({ branches, canCreate, filters }: Props) {
     const applyFilters = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        router.get(route('branches.index'), {
-            search,
-            status: status === 'all' ? '' : status,
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            route('branches.index'),
+            {
+                search,
+                status: status === 'all' ? '' : status,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const resetFilters = () => {
         setSearch('');
         setStatus('all');
 
-        router.get(route('branches.index'), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            route('branches.index'),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const confirmDelete = () => {
@@ -131,10 +139,10 @@ export default function BranchesIndex({ branches, canCreate, filters }: Props) {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-                            <Building2 className="h-6 w-6 text-primary" />
+                            <Building2 className="text-primary h-6 w-6" />
                             {t('management.branchesTitle')}
                         </h1>
-                        <p className="text-sm text-muted-foreground">{t('management.branchesDescription')}</p>
+                        <p className="text-muted-foreground text-sm">{t('management.branchesDescription')}</p>
                     </div>
                     {canCreate ? (
                         <Button className="gap-2" onClick={openCreate}>
@@ -164,7 +172,9 @@ export default function BranchesIndex({ branches, canCreate, filters }: Props) {
                             </Select>
                             <div className="flex gap-2">
                                 <Button type="submit">Apply</Button>
-                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" variant="outline" onClick={resetFilters}>
+                                    Reset
+                                </Button>
                             </div>
                         </form>
                         {branches.data.length === 0 ? (
@@ -191,16 +201,18 @@ export default function BranchesIndex({ branches, canCreate, filters }: Props) {
                                     {branches.data.map((branch) => (
                                         <TableRow key={branch.id}>
                                             <TableCell className="font-medium">{branch.name}</TableCell>
-                                            <TableCell className="font-mono text-sm text-muted-foreground">{branch.code}</TableCell>
+                                            <TableCell className="text-muted-foreground font-mono text-sm">{branch.code}</TableCell>
                                             <TableCell className="text-sm">{branch.city ?? '-'}</TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">{branch.phone ?? '-'}</TableCell>
+                                            <TableCell className="text-muted-foreground text-sm">{branch.phone ?? '-'}</TableCell>
                                             <TableCell className="tabular-nums">{branch.tickets_count}</TableCell>
                                             <TableCell>
                                                 <Badge
                                                     variant="outline"
-                                                    className={branch.is_active
-                                                        ? 'border-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                        : 'border-0 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}
+                                                    className={
+                                                        branch.is_active
+                                                            ? 'border-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                            : 'border-0 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                                    }
                                                 >
                                                     {branch.is_active ? t('common.active') : t('common.inactive')}
                                                 </Badge>
@@ -213,12 +225,17 @@ export default function BranchesIndex({ branches, canCreate, filters }: Props) {
                                                         </Button>
                                                     ) : null}
                                                     {branch.can_delete ? (
-                                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => setDeleteTarget(branch)}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-red-500 hover:text-red-700"
+                                                            onClick={() => setDeleteTarget(branch)}
+                                                        >
                                                             {t('common.delete')}
                                                         </Button>
                                                     ) : null}
                                                     {!branch.can_update && !branch.can_delete ? (
-                                                        <span className="text-sm text-muted-foreground">-</span>
+                                                        <span className="text-muted-foreground text-sm">-</span>
                                                     ) : null}
                                                 </div>
                                             </TableCell>

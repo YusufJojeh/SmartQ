@@ -11,27 +11,26 @@ export default function PublicAssistant() {
         <>
             <Head title={t('assistant.publicTitle')} />
 
-            <div className="flex min-h-screen flex-col bg-paper bg-gradient-paper">
-
+            <div className="bg-paper bg-gradient-paper flex min-h-screen flex-col">
                 {/* ── Nexus public nav ─────────────────────────────── */}
-                <header className="sticky top-0 z-40 hairline-b glass">
+                <header className="hairline-b glass sticky top-0 z-40">
                     <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
                         <Link href={route('home')} className="flex items-center gap-2.5">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-ink text-paper shadow-soft">
+                            <div className="bg-ink text-paper shadow-soft flex h-8 w-8 items-center justify-center rounded-xl">
                                 <Layers3 className="h-4 w-4" />
                             </div>
-                            <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink">SmartQ</span>
+                            <span className="text-ink font-mono text-[11px] tracking-[0.22em] uppercase">SmartQ</span>
                         </Link>
 
                         <div className="flex items-center gap-3">
-                            <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-accent-soft px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.18em] text-accent">
+                            <div className="bg-accent-soft text-accent hidden items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[9px] tracking-[0.18em] uppercase sm:flex">
                                 <MessageCircle className="h-3 w-3" />
                                 {t('assistant.publicLabel')}
                             </div>
                             <LanguageSwitcher compact />
                             <Link
                                 href={route('tickets.join')}
-                                className="hidden sm:inline-flex items-center rounded-full hairline bg-paper px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper-soft transition"
+                                className="hairline bg-paper text-ink hover:bg-paper-soft hidden items-center rounded-full px-3 py-1.5 text-xs font-medium transition sm:inline-flex"
                             >
                                 {t('landing.joinQueue')}
                             </Link>
@@ -42,15 +41,15 @@ export default function PublicAssistant() {
                 {/* ── Assistant panel (full remaining height) ─────── */}
                 <main className="flex flex-1 flex-col overflow-hidden">
                     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-hidden px-4 py-4">
-                        <div className="flex-1 overflow-hidden rounded-2xl hairline bg-card shadow-soft">
+                        <div className="hairline bg-card shadow-soft flex-1 overflow-hidden rounded-2xl">
                             <AssistantPanel scope="public" />
                         </div>
                     </div>
                 </main>
 
                 {/* ── Footer ──────────────────────────────────────── */}
-                <footer className="hairline-t py-3 px-4">
-                    <div className="mx-auto max-w-3xl flex items-center justify-between text-[10px] text-muted-foreground font-mono uppercase tracking-[0.16em]">
+                <footer className="hairline-t px-4 py-3">
+                    <div className="text-muted-foreground mx-auto flex max-w-3xl items-center justify-between font-mono text-[10px] tracking-[0.16em] uppercase">
                         <span>SmartQ</span>
                         <span>{t('assistant.readOnly')}</span>
                     </div>

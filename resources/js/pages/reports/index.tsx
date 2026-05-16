@@ -1,40 +1,14 @@
-import { KpiCard } from '@/components/kpi-card';
 import { EmptyState } from '@/components/empty-state';
+import { KpiCard } from '@/components/kpi-card';
 import { PageHeader } from '@/components/page-header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useLocale } from '@/hooks/use-locale';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
-import { useLocale } from '@/hooks/use-locale';
-import {
-    AlertTriangle,
-    BarChart3,
-    BrainCircuit,
-    CheckCircle2,
-    Clock,
-    Download,
-    Flame,
-    Timer,
-    TrendingUp,
-    Users,
-} from 'lucide-react';
-import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Cell,
-    Pie,
-    PieChart,
-    Line,
-    LineChart,
-    Legend,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from 'recharts';
+import { Head } from '@inertiajs/react';
+import { AlertTriangle, BarChart3, BrainCircuit, CheckCircle2, Clock, Download, Flame, Timer, TrendingUp, Users } from 'lucide-react';
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 interface ReportMetrics {
     total_tickets: number;
@@ -87,12 +61,12 @@ interface Props {
 }
 
 const SERVICE_COLORS = [
-    'hsl(32 96% 52%)',   /* amber — primary */
-    'hsl(152 56% 36%)',  /* success green */
-    'hsl(222 47% 40%)',  /* ink-mid */
-    'hsl(267 72% 63%)',  /* purple */
-    'hsl(4 74% 49%)',    /* destructive */
-    'hsl(189 88% 40%)',  /* teal */
+    'hsl(32 96% 52%)' /* amber — primary */,
+    'hsl(152 56% 36%)' /* success green */,
+    'hsl(222 47% 40%)' /* ink-mid */,
+    'hsl(267 72% 63%)' /* purple */,
+    'hsl(4 74% 49%)' /* destructive */,
+    'hsl(189 88% 40%)' /* teal */,
 ];
 
 interface ChartTooltipEntry {
@@ -110,8 +84,8 @@ interface ChartTooltipProps {
 function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
     if (active && payload && payload.length) {
         return (
-            <div className="rounded-xl bg-ink px-4 py-3 text-paper shadow-elev text-xs">
-                {label && <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-paper/60">{label}</p>}
+            <div className="bg-ink text-paper shadow-elev rounded-xl px-4 py-3 text-xs">
+                {label && <p className="text-paper/60 mb-2 font-mono text-[10px] tracking-[0.15em] uppercase">{label}</p>}
                 {payload.map((p: ChartTooltipEntry) => (
                     <div key={String(p.dataKey)} className="flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
@@ -177,31 +151,28 @@ export default function ReportsIndex({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={t('reports.title')} />
-            <div className="flex flex-col gap-6 p-4 sm:p-6 page-enter">
-
+            <div className="page-enter flex flex-col gap-6 p-4 sm:p-6">
                 {/* Page header */}
                 <PageHeader
                     title={t('reports.title')}
-                    description={
-                        dateRange
-                            ? `${dateRange.from} — ${dateRange.to}`
-                            : t('reports.description')
-                    }
+                    description={dateRange ? `${dateRange.from} — ${dateRange.to}` : t('reports.description')}
                     icon={BarChart3}
-                    actions={canExport ? (
-                        <a
-                            href={route('reports.export')}
-                            download
-                            className="inline-flex items-center gap-2 rounded-xl hairline bg-card px-4 py-2 text-sm font-medium text-ink shadow-soft hover:shadow-elev hover:-translate-y-0.5 transition"
-                        >
-                            <Download className="h-4 w-4 text-accent" />
-                            {t('common.exportXlsx')}
-                        </a>
-                    ) : undefined}
+                    actions={
+                        canExport ? (
+                            <a
+                                href={route('reports.export')}
+                                download
+                                className="hairline bg-card text-ink shadow-soft hover:shadow-elev inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition hover:-translate-y-0.5"
+                            >
+                                <Download className="text-accent h-4 w-4" />
+                                {t('common.exportXlsx')}
+                            </a>
+                        ) : undefined
+                    }
                 />
 
                 {/* KPI summary row */}
-                <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                     <KpiCard
                         title={t('reports.totalTickets')}
                         value={metrics.total_tickets}
@@ -240,9 +211,11 @@ export default function ReportsIndex({
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle className="text-base">{t('reports.dailyVolume')}</CardTitle>
-                                <CardDescription className="text-xs mt-0.5">{t('reports.dailyVolumeDescription')}</CardDescription>
+                                <CardDescription className="mt-0.5 text-xs">{t('reports.dailyVolumeDescription')}</CardDescription>
                             </div>
-                            <Badge variant="secondary" className="text-xs">{t('reports.trend')}</Badge>
+                            <Badge variant="secondary" className="text-xs">
+                                {t('reports.trend')}
+                            </Badge>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -285,7 +258,6 @@ export default function ReportsIndex({
 
                 {/* Service distribution + Teller leaderboard */}
                 <div className="grid gap-4 lg:grid-cols-2">
-
                     {/* Service volume donut */}
                     <Card>
                         <CardHeader className="pb-4">
@@ -325,18 +297,16 @@ export default function ReportsIndex({
                                     {/* Legend rows */}
                                     <div className="space-y-2">
                                         {serviceVolume.map((s, idx) => {
-                                            const pct = metrics.total_tickets > 0
-                                                ? Math.round((s.total / metrics.total_tickets) * 100)
-                                                : 0;
+                                            const pct = metrics.total_tickets > 0 ? Math.round((s.total / metrics.total_tickets) * 100) : 0;
                                             return (
                                                 <div key={s.name} className="flex items-center gap-2 text-sm">
                                                     <span
                                                         className="h-2.5 w-2.5 shrink-0 rounded-full"
                                                         style={{ backgroundColor: SERVICE_COLORS[idx % SERVICE_COLORS.length] }}
                                                     />
-                                                    <span className="flex-1 truncate text-muted-foreground">{s.name}</span>
-                                                    <span className="tabular-nums font-semibold">{s.total}</span>
-                                                    <span className="w-8 text-right text-xs text-muted-foreground">{pct}%</span>
+                                                    <span className="text-muted-foreground flex-1 truncate">{s.name}</span>
+                                                    <span className="font-semibold tabular-nums">{s.total}</span>
+                                                    <span className="text-muted-foreground w-8 text-right text-xs">{pct}%</span>
                                                 </div>
                                             );
                                         })}
@@ -364,24 +334,29 @@ export default function ReportsIndex({
                                 <div className="space-y-4">
                                     {tellerStats.map((t, idx) => {
                                         const pct = Math.round((t.completed / maxTeller) * 100);
-                                        const INITIALS = t.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase();
+                                        const INITIALS = t.name
+                                            .split(' ')
+                                            .slice(0, 2)
+                                            .map((n) => n[0])
+                                            .join('')
+                                            .toUpperCase();
 
                                         return (
                                             <div key={t.name} className="space-y-1.5">
                                                 <div className="flex items-center gap-2.5">
-                                                    <span className="w-4 text-right text-xs font-semibold text-muted-foreground">{idx + 1}</span>
-                                                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                                                    <span className="text-muted-foreground w-4 text-right text-xs font-semibold">{idx + 1}</span>
+                                                    <div className="bg-primary/10 text-primary flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold">
                                                         {INITIALS}
                                                     </div>
                                                     <span className="flex-1 truncate text-sm font-medium">{t.name}</span>
-                                                    <div className="flex gap-3 text-xs shrink-0">
-                                                        <span className="tabular-nums font-semibold">{t.completed} served</span>
+                                                    <div className="flex shrink-0 gap-3 text-xs">
+                                                        <span className="font-semibold tabular-nums">{t.completed} served</span>
                                                         <span className="text-muted-foreground">{t.avg_service_time}m avg</span>
                                                     </div>
                                                 </div>
-                                                <div className="ms-[4.5rem] h-1.5 rounded-full bg-muted overflow-hidden">
+                                                <div className="bg-muted ms-[4.5rem] h-1.5 overflow-hidden rounded-full">
                                                     <div
-                                                        className="h-full rounded-full bg-primary/70 transition-all duration-500"
+                                                        className="bg-primary/70 h-full rounded-full transition-all duration-500"
                                                         style={{ width: pct + '%' }}
                                                     />
                                                 </div>
@@ -397,13 +372,14 @@ export default function ReportsIndex({
                 {/* AI Queue Insights */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2">
-                        <BrainCircuit className="h-4 w-4 text-primary" />
-                        <h2 className="text-sm font-semibold text-foreground">AI Queue Insights</h2>
-                        <Badge variant="secondary" className="text-xs">Beta</Badge>
+                        <BrainCircuit className="text-primary h-4 w-4" />
+                        <h2 className="text-foreground text-sm font-semibold">AI Queue Insights</h2>
+                        <Badge variant="secondary" className="text-xs">
+                            Beta
+                        </Badge>
                     </div>
 
                     <div className="grid gap-4 lg:grid-cols-2">
-
                         {/* Peak-hour heatmap */}
                         <Card>
                             <CardHeader className="pb-4">
@@ -448,17 +424,19 @@ export default function ReportsIndex({
                             <CardContent className="space-y-4">
                                 {staffingAdvisory ? (
                                     <>
-                                        <div className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${advisoryColors[staffingAdvisory.level]}`}>
+                                        <div
+                                            className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${advisoryColors[staffingAdvisory.level]}`}
+                                        >
                                             <AdvisoryIcon className="mt-0.5 h-4 w-4 shrink-0" />
                                             <p className="leading-relaxed">{staffingAdvisory.message}</p>
                                         </div>
 
                                         {staffingAdvisory.overload_hours.length > 0 && (
                                             <div className="space-y-2">
-                                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Overloaded slots</p>
+                                                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Overloaded slots</p>
                                                 <div className="flex flex-wrap gap-2">
                                                     {staffingAdvisory.overload_hours.map((h) => (
-                                                        <Badge key={h.hour} variant="outline" className="text-xs gap-1">
+                                                        <Badge key={h.hour} variant="outline" className="gap-1 text-xs">
                                                             <Clock className="h-3 w-3" />
                                                             {String(h.hour).padStart(2, '0')}:00
                                                             <span className="text-muted-foreground">· {h.avg_wait}m wait</span>
@@ -469,11 +447,13 @@ export default function ReportsIndex({
                                         )}
 
                                         {staffingAdvisory.peak_hour && (
-                                            <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-                                                <span className="font-semibold text-foreground">Busiest hour: </span>
+                                            <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-2 text-xs">
+                                                <span className="text-foreground font-semibold">Busiest hour: </span>
                                                 {String(staffingAdvisory.peak_hour.hour).padStart(2, '0')}:00
-                                                {' · '}{staffingAdvisory.peak_hour.total} tickets
-                                                {' · '}{staffingAdvisory.peak_hour.avg_wait}m avg wait
+                                                {' · '}
+                                                {staffingAdvisory.peak_hour.total} tickets
+                                                {' · '}
+                                                {staffingAdvisory.peak_hour.avg_wait}m avg wait
                                             </div>
                                         )}
                                     </>

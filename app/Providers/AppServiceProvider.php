@@ -12,6 +12,7 @@ use App\Policies\CounterPolicy;
 use App\Policies\QueueTicketPolicy;
 use App\Policies\ServiceCategoryPolicy;
 use App\Policies\UserPolicy;
+use App\Services\QueueService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -21,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(\App\Services\QueueService::class);
+        $this->app->singleton(QueueService::class);
     }
 
     public function boot(): void

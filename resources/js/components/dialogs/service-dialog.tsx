@@ -26,7 +26,7 @@ export default function ServiceDialog({
     onOpenChange,
 }: {
     service: ServiceProps | null;
-    branches: {id: number, name: string}[];
+    branches: { id: number; name: string }[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
@@ -59,7 +59,7 @@ export default function ServiceDialog({
                 });
             } else {
                 reset();
-                if(branches.length) setData('branch_id', branches[0].id);
+                if (branches.length) setData('branch_id', branches[0].id);
             }
         }
     }, [branches, clearErrors, open, reset, service, setData]);
@@ -79,20 +79,22 @@ export default function ServiceDialog({
                 <form onSubmit={submit}>
                     <DialogHeader>
                         <DialogTitle>{isEdit ? t('management.editService') : t('management.addServiceDialog')}</DialogTitle>
-                        <DialogDescription>
-                            {t('management.serviceDialogDescription')}
-                        </DialogDescription>
+                        <DialogDescription>{t('management.serviceDialogDescription')}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         {branches.length > 0 && (
                             <div className="grid gap-2">
                                 <Label>{t('common.branch')}</Label>
-                                <select 
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                                    value={data.branch_id} 
+                                <select
+                                    className="border-input bg-background ring-offset-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
+                                    value={data.branch_id}
                                     onChange={(e) => setData('branch_id', parseInt(e.target.value))}
                                 >
-                                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                    {branches.map((b) => (
+                                        <option key={b.id} value={b.id}>
+                                            {b.name}
+                                        </option>
+                                    ))}
                                 </select>
                                 {errors.branch_id && <p className="text-sm text-red-500">{errors.branch_id}</p>}
                             </div>
@@ -115,28 +117,52 @@ export default function ServiceDialog({
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="prefix">{t('management.prefix')}</Label>
-                                <Input id="prefix" value={data.prefix} onChange={(e) => setData('prefix', e.target.value)} placeholder={t('management.prefixPlaceholder')} />
+                                <Input
+                                    id="prefix"
+                                    value={data.prefix}
+                                    onChange={(e) => setData('prefix', e.target.value)}
+                                    placeholder={t('management.prefixPlaceholder')}
+                                />
                                 {errors.prefix && <p className="text-sm text-red-500">{errors.prefix}</p>}
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="priority">Priority</Label>
-                                <Input id="priority" type="number" min={1} max={10} value={data.priority_level} onChange={(e) => setData('priority_level', parseInt(e.target.value, 10) || 1)} />
+                                <Input
+                                    id="priority"
+                                    type="number"
+                                    min={1}
+                                    max={10}
+                                    value={data.priority_level}
+                                    onChange={(e) => setData('priority_level', parseInt(e.target.value, 10) || 1)}
+                                />
                                 {errors.priority_level && <p className="text-sm text-red-500">{errors.priority_level}</p>}
                             </div>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="est">{t('management.estimatedWaitMins')}</Label>
-                            <Input id="est" type="number" min={1} value={data.estimated_service_minutes} onChange={(e) => setData('estimated_service_minutes', parseInt(e.target.value) || 1)} />
+                            <Input
+                                id="est"
+                                type="number"
+                                min={1}
+                                value={data.estimated_service_minutes}
+                                onChange={(e) => setData('estimated_service_minutes', parseInt(e.target.value) || 1)}
+                            />
                             {errors.estimated_service_minutes && <p className="text-sm text-red-500">{errors.estimated_service_minutes}</p>}
                         </div>
-                        <div className="flex items-center justify-between mt-2">
-                            <Label htmlFor="active" className="cursor-pointer">{t('management.activeStatus')}</Label>
+                        <div className="mt-2 flex items-center justify-between">
+                            <Label htmlFor="active" className="cursor-pointer">
+                                {t('management.activeStatus')}
+                            </Label>
                             <Switch id="active" checked={data.is_active} onCheckedChange={(c) => setData('is_active', c)} />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
-                        <Button type="submit" disabled={processing}>{isEdit ? t('common.saveChanges') : t('common.create')}</Button>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button type="submit" disabled={processing}>
+                            {isEdit ? t('common.saveChanges') : t('common.create')}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

@@ -1,7 +1,7 @@
-import { EmptyState } from '@/components/empty-state';
 import { ConfirmDialog } from '@/components/dialogs/confirm-dialog';
-import { PaginationLinks } from '@/components/pagination-links';
 import ServiceDialog from '@/components/dialogs/service-dialog';
+import { EmptyState } from '@/components/empty-state';
+import { PaginationLinks } from '@/components/pagination-links';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,15 +67,19 @@ export default function ServicesIndex({ categories, branches, canCreate, filters
     const applyFilters = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        router.get(route('service-categories.index'), {
-            search,
-            status: status === 'all' ? '' : status,
-            branch_id: branchId === 'all' ? '' : branchId,
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            route('service-categories.index'),
+            {
+                search,
+                status: status === 'all' ? '' : status,
+                branch_id: branchId === 'all' ? '' : branchId,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const resetFilters = () => {
@@ -83,11 +87,15 @@ export default function ServicesIndex({ categories, branches, canCreate, filters
         setStatus('all');
         setBranchId('all');
 
-        router.get(route('service-categories.index'), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            route('service-categories.index'),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const confirmDelete = () => {
@@ -138,10 +146,10 @@ export default function ServicesIndex({ categories, branches, canCreate, filters
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-                            <Tags className="h-6 w-6 text-primary" />
+                            <Tags className="text-primary h-6 w-6" />
                             {t('management.servicesTitle')}
                         </h1>
-                        <p className="text-sm text-muted-foreground">{t('management.servicesDescription')}</p>
+                        <p className="text-muted-foreground text-sm">{t('management.servicesDescription')}</p>
                     </div>
                     {canCreate ? (
                         <Button className="gap-2" onClick={openCreate}>
@@ -158,7 +166,11 @@ export default function ServicesIndex({ categories, branches, canCreate, filters
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_200px_220px_auto]" onSubmit={applyFilters}>
-                            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by service name, code, or prefix" />
+                            <Input
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                placeholder="Search by service name, code, or prefix"
+                            />
                             <Select value={status} onValueChange={setStatus}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="All statuses" />
@@ -184,7 +196,9 @@ export default function ServicesIndex({ categories, branches, canCreate, filters
                             </Select>
                             <div className="flex gap-2">
                                 <Button type="submit">Apply</Button>
-                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" variant="outline" onClick={resetFilters}>
+                                    Reset
+                                </Button>
                             </div>
                         </form>
                         {categories.data.length === 0 ? (
@@ -212,9 +226,9 @@ export default function ServicesIndex({ categories, branches, canCreate, filters
                                     {categories.data.map((service) => (
                                         <TableRow key={service.id}>
                                             <TableCell className="font-medium">{service.name}</TableCell>
-                                            <TableCell className="font-mono text-sm text-muted-foreground">{service.code}</TableCell>
+                                            <TableCell className="text-muted-foreground font-mono text-sm">{service.code}</TableCell>
                                             <TableCell>
-                                                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-sm font-bold text-primary">
+                                                <div className="bg-primary/10 text-primary flex h-7 w-7 items-center justify-center rounded-md text-sm font-bold">
                                                     {service.prefix}
                                                 </div>
                                             </TableCell>
@@ -225,8 +239,8 @@ export default function ServicesIndex({ categories, branches, canCreate, filters
                                                         service.priority_level <= 2
                                                             ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                                                             : service.priority_level <= 5
-                                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                                                     }`}
                                                 >
                                                     Level {service.priority_level}
@@ -234,7 +248,7 @@ export default function ServicesIndex({ categories, branches, canCreate, filters
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-1 text-sm">
-                                                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                                    <Clock className="text-muted-foreground h-3.5 w-3.5" />
                                                     {service.estimated_service_minutes} min
                                                 </div>
                                             </TableCell>
@@ -242,9 +256,11 @@ export default function ServicesIndex({ categories, branches, canCreate, filters
                                             <TableCell>
                                                 <Badge
                                                     variant="outline"
-                                                    className={service.is_active
-                                                        ? 'border-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                        : 'border-0 bg-gray-100 text-gray-600'}
+                                                    className={
+                                                        service.is_active
+                                                            ? 'border-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                            : 'border-0 bg-gray-100 text-gray-600'
+                                                    }
                                                 >
                                                     {service.is_active ? t('common.active') : t('common.inactive')}
                                                 </Badge>
@@ -257,12 +273,17 @@ export default function ServicesIndex({ categories, branches, canCreate, filters
                                                         </Button>
                                                     ) : null}
                                                     {service.can_delete ? (
-                                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => setDeleteTarget(service)}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-red-500 hover:text-red-700"
+                                                            onClick={() => setDeleteTarget(service)}
+                                                        >
                                                             {t('common.delete')}
                                                         </Button>
                                                     ) : null}
                                                     {!service.can_update && !service.can_delete ? (
-                                                        <span className="text-sm text-muted-foreground">-</span>
+                                                        <span className="text-muted-foreground text-sm">-</span>
                                                     ) : null}
                                                 </div>
                                             </TableCell>

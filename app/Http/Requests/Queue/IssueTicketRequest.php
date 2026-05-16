@@ -15,7 +15,7 @@ class IssueTicketRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'branch_id'           => ['required', 'integer', 'exists:branches,id'],
+            'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'service_category_id' => [
                 'required',
                 'integer',
@@ -23,17 +23,17 @@ class IssueTicketRequest extends FormRequest
                     $query->where('branch_id', $this->integer('branch_id'));
                 }),
             ],
-            'customer_name'       => ['nullable', 'string', 'max:150'],
-            'customer_phone'      => ['nullable', 'string', 'max:20', 'regex:/^[+0-9\s\-()]+$/'],
+            'customer_name' => ['nullable', 'string', 'max:150'],
+            'customer_phone' => ['nullable', 'string', 'max:20', 'regex:/^[+0-9\s\-()]+$/'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'branch_id.required'           => 'Please select a branch.',
+            'branch_id.required' => 'Please select a branch.',
             'service_category_id.required' => 'Please select a service.',
-            'service_category_id.exists'   => 'Please select a service from the chosen branch.',
+            'service_category_id.exists' => 'Please select a service from the chosen branch.',
         ];
     }
 }

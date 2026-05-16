@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\QueueTicket;
 use App\Services\QueueService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -36,11 +35,11 @@ class TellerConsoleController extends Controller
             ->count();
 
         return Inertia::render('teller/console', [
-            'snapshot'       => $snapshot,
-            'activeTicket'   => $activeTicket,
+            'snapshot' => $snapshot,
+            'activeTicket' => $activeTicket,
             'todayCompleted' => $todayCompleted,
-            'counter'        => $user->counter,
-            'branchId'       => $user->branch_id,
+            'counter' => $user->counter,
+            'branchId' => $user->branch_id,
         ]);
     }
 

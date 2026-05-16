@@ -1,7 +1,7 @@
-import { EmptyState } from '@/components/empty-state';
 import { ConfirmDialog } from '@/components/dialogs/confirm-dialog';
-import { PaginationLinks } from '@/components/pagination-links';
 import UserDialog from '@/components/dialogs/user-dialog';
+import { EmptyState } from '@/components/empty-state';
+import { PaginationLinks } from '@/components/pagination-links';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,16 +77,20 @@ export default function UsersIndex({ users, branches, counters, roles, canCreate
     const applyFilters = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        router.get(route('users.index'), {
-            search,
-            status: status === 'all' ? '' : status,
-            branch_id: branchId === 'all' ? '' : branchId,
-            role: role === 'all' ? '' : role,
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            route('users.index'),
+            {
+                search,
+                status: status === 'all' ? '' : status,
+                branch_id: branchId === 'all' ? '' : branchId,
+                role: role === 'all' ? '' : role,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const resetFilters = () => {
@@ -95,11 +99,15 @@ export default function UsersIndex({ users, branches, counters, roles, canCreate
         setBranchId('all');
         setRole('all');
 
-        router.get(route('users.index'), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            route('users.index'),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const confirmDelete = () => {
@@ -150,10 +158,10 @@ export default function UsersIndex({ users, branches, counters, roles, canCreate
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-                            <Users className="h-6 w-6 text-primary" />
+                            <Users className="text-primary h-6 w-6" />
                             {t('management.usersTitle')}
                         </h1>
-                        <p className="text-sm text-muted-foreground">{t('management.usersDescription')}</p>
+                        <p className="text-muted-foreground text-sm">{t('management.usersDescription')}</p>
                     </div>
                     {canCreate ? (
                         <Button className="gap-2" onClick={openCreate}>
@@ -209,7 +217,9 @@ export default function UsersIndex({ users, branches, counters, roles, canCreate
                             </Select>
                             <div className="flex gap-2">
                                 <Button type="submit">Apply</Button>
-                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" variant="outline" onClick={resetFilters}>
+                                    Reset
+                                </Button>
                             </div>
                         </form>
                         {users.data.length === 0 ? (
@@ -238,21 +248,25 @@ export default function UsersIndex({ users, branches, counters, roles, canCreate
                                         return (
                                             <TableRow key={user.id}>
                                                 <TableCell className="font-medium">{user.name}</TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                                                <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline" className={`border-0 ${ROLE_STYLES[roleName] ?? ''}`}>
                                                         {roleName.replace('_', ' ')}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-sm">
-                                                    {user.branch?.name ?? <span className="text-muted-foreground">{t('management.allBranchesScope')}</span>}
+                                                    {user.branch?.name ?? (
+                                                        <span className="text-muted-foreground">{t('management.allBranchesScope')}</span>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge
                                                         variant="outline"
-                                                        className={user.is_active
-                                                            ? 'border-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                            : 'border-0 bg-gray-100 text-gray-600'}
+                                                        className={
+                                                            user.is_active
+                                                                ? 'border-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                                : 'border-0 bg-gray-100 text-gray-600'
+                                                        }
                                                     >
                                                         {user.is_active ? t('common.active') : t('common.inactive')}
                                                     </Badge>
@@ -265,12 +279,17 @@ export default function UsersIndex({ users, branches, counters, roles, canCreate
                                                             </Button>
                                                         ) : null}
                                                         {user.can_delete ? (
-                                                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => setDeleteTarget(user)}>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="text-red-500 hover:text-red-700"
+                                                                onClick={() => setDeleteTarget(user)}
+                                                            >
                                                                 {t('common.delete')}
                                                             </Button>
                                                         ) : null}
                                                         {!user.can_update && !user.can_delete ? (
-                                                            <span className="text-sm text-muted-foreground">-</span>
+                                                            <span className="text-muted-foreground text-sm">-</span>
                                                         ) : null}
                                                     </div>
                                                 </TableCell>

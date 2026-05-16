@@ -74,9 +74,7 @@ export default function BranchDialog({
                 <form onSubmit={submit}>
                     <DialogHeader>
                         <DialogTitle>{isEdit ? t('management.editBranch') : t('management.addBranchDialog')}</DialogTitle>
-                        <DialogDescription>
-                            {isEdit ? t('management.editBranchDescription') : t('management.addBranchDescription')}
-                        </DialogDescription>
+                        <DialogDescription>{isEdit ? t('management.editBranchDescription') : t('management.addBranchDescription')}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
@@ -104,14 +102,20 @@ export default function BranchDialog({
                             <Input id="phone" value={data.phone} onChange={(e) => setData('phone', e.target.value)} />
                             {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
                         </div>
-                        <div className="flex items-center justify-between mt-2">
-                            <Label htmlFor="active" className="cursor-pointer">{t('management.activeStatus')}</Label>
+                        <div className="mt-2 flex items-center justify-between">
+                            <Label htmlFor="active" className="cursor-pointer">
+                                {t('management.activeStatus')}
+                            </Label>
                             <Switch id="active" checked={data.is_active} onCheckedChange={(c) => setData('is_active', c)} />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
-                        <Button type="submit" disabled={processing}>{isEdit ? t('common.saveChanges') : t('common.create')}</Button>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button type="submit" disabled={processing}>
+                            {isEdit ? t('common.saveChanges') : t('common.create')}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

@@ -1,6 +1,6 @@
-import { cn } from '@/lib/utils';
 import { useLocale } from '@/hooks/use-locale';
-import { Star, ArrowUp, Minus } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ArrowUp, Minus, Star } from 'lucide-react';
 
 type PriorityLevel = 1 | 2 | 3 | number;
 
@@ -41,13 +41,7 @@ export function PriorityBadge({ level, showLabel = true, className }: PriorityBa
     const Icon = config.icon;
 
     return (
-        <span
-            className={cn(
-                'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ring-1',
-                config.className,
-                className,
-            )}
-        >
+        <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ring-1', config.className, className)}>
             <Icon className={cn('h-3 w-3', config.iconClass)} />
             {showLabel && t(config.labelKey)}
         </span>

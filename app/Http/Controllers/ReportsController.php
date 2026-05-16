@@ -5,14 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Services\ReportsService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Color;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -33,17 +32,17 @@ class ReportsController extends Controller
     {
         abort_unless($request->user()?->hasPermissionTo('report.export'), 403);
 
-        $rows     = $this->reportsService->exportRows($request->user());
-        $from     = $rows['dateRange']['from'];
-        $to       = $rows['dateRange']['to'];
+        $rows = $this->reportsService->exportRows($request->user());
+        $from = $rows['dateRange']['from'];
+        $to = $rows['dateRange']['to'];
         $filename = "smartq-report-{$from}-to-{$to}.xlsx";
 
         AuditLog::record('report.exported', null, [], [
-            'from'       => $from,
-            'to'         => $to,
-            'branch_id'  => $rows['branch_id'],
-            'row_count'  => count($rows['tickets']),
-            'format'     => 'xlsx',
+            'from' => $from,
+            'to' => $to,
+            'branch_id' => $rows['branch_id'],
+            'row_count' => count($rows['tickets']),
+            'format' => 'xlsx',
         ]);
 
         $spreadsheet = $this->buildSpreadsheet($rows, $from, $to);
@@ -52,9 +51,9 @@ class ReportsController extends Controller
             $writer = new Xlsx($spreadsheet);
             $writer->save('php://output');
         }, $filename, [
-            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Cache-Control'       => 'max-age=0',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -62,7 +61,7 @@ class ReportsController extends Controller
 
     private function buildSpreadsheet(array $rows, string $from, string $to): Spreadsheet
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $spreadsheet->getProperties()
             ->setCreator('SmartQ')
             ->setTitle("SmartQ Report {$from} to {$to}")
@@ -76,7 +75,7 @@ class ReportsController extends Controller
         $this->buildTicketsSheet($spreadsheet, $rows['tickets']);
 
         // Sheet 3 — Teller performance (if data available)
-        if (!empty($rows['tellerStats'])) {
+        if (! empty($rows['tellerStats'])) {
             $this->buildTellerSheet($spreadsheet, $rows['tellerStats']);
         }
 
@@ -93,7 +92,7 @@ class ReportsController extends Controller
         $sheet->setTitle('Summary');
 
         // Colour palette
-        $navy  = '0A1628'; // deep navy (ink)
+        $navy = '0A1628'; // deep navy (ink)
         $amber = 'F0800D'; // warm amber accent
         $white = 'FFFFFF';
         $light = 'FBF9F5'; // paper-soft
@@ -122,11 +121,11 @@ class ReportsController extends Controller
         // ── KPI section ──────────────────────────────────────────────────────
         $metrics = $rows['metrics'] ?? [];
         $kpis = [
-            ['Total Tickets Issued',    $metrics['total_tickets']      ?? 0, ''],
-            ['Completed Tickets',       $metrics['completed_tickets']  ?? 0, ''],
-            ['Completion Rate',         ($metrics['completion_rate']   ?? 0) . '%', ''],
-            ['Avg Wait Time',           ($metrics['avg_wait_minutes']  ?? 0) . ' min', ''],
-            ['Avg Service Time',        ($metrics['avg_service_minutes'] ?? 0) . ' min', ''],
+            ['Total Tickets Issued',    $metrics['total_tickets'] ?? 0, ''],
+            ['Completed Tickets',       $metrics['completed_tickets'] ?? 0, ''],
+            ['Completion Rate',         ($metrics['completion_rate'] ?? 0).'%', ''],
+            ['Avg Wait Time',           ($metrics['avg_wait_minutes'] ?? 0).' min', ''],
+            ['Avg Service Time',        ($metrics['avg_service_minutes'] ?? 0).' min', ''],
         ];
 
         $sheet->getRowDimension(3)->setRowHeight(10); // spacer
@@ -141,7 +140,7 @@ class ReportsController extends Controller
         $sheet->getRowDimension(4)->setRowHeight(24);
 
         $kpiRow = 5;
-        $altBg  = false;
+        $altBg = false;
         foreach ($kpis as [$label, $value]) {
             $bg = $altBg ? 'F0EFE9' : $light;
             $this->applyStyle($sheet, "A{$kpiRow}:B{$kpiRow}", [
@@ -156,7 +155,7 @@ class ReportsController extends Controller
             ]);
             $sheet->getRowDimension($kpiRow)->setRowHeight(22);
             $kpiRow++;
-            $altBg = !$altBg;
+            $altBg = ! $altBg;
         }
 
         // ── Daily volume table ───────────────────────────────────────────────
@@ -171,7 +170,7 @@ class ReportsController extends Controller
 
         $headRow = $dailyRow + 1;
         foreach (['Date', 'Total', 'Completed', 'Completion %'] as $col => $header) {
-            $cell = chr(65 + $col) . $headRow;
+            $cell = chr(65 + $col).$headRow;
             $sheet->setCellValue($cell, $header);
             $this->applyStyle($sheet, $cell, [
                 'font' => ['bold' => true, 'size' => 9, 'color' => ['rgb' => $white]],
@@ -184,7 +183,7 @@ class ReportsController extends Controller
         $dataRow = $headRow + 1;
         $altBg = false;
         foreach ($rows['dailyVolume'] ?? [] as $day) {
-            $bg  = $altBg ? 'F0EFE9' : $light;
+            $bg = $altBg ? 'F0EFE9' : $light;
             $pct = $day['total'] > 0 ? round($day['completed'] / $day['total'] * 100, 1) : 0;
             $sheet->setCellValue("A{$dataRow}", $day['date']);
             $sheet->setCellValue("B{$dataRow}", $day['total']);
@@ -198,13 +197,13 @@ class ReportsController extends Controller
             $this->applyStyle($sheet, "A{$dataRow}", ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]);
             $sheet->getRowDimension($dataRow)->setRowHeight(18);
             $dataRow++;
-            $altBg = !$altBg;
+            $altBg = ! $altBg;
         }
 
         // ── Footer ────────────────────────────────────────────────────────────
         $footerRow = $dataRow + 2;
         $sheet->mergeCells("A{$footerRow}:G{$footerRow}");
-        $sheet->setCellValue("A{$footerRow}", 'Generated by SmartQ · ' . now()->format('Y-m-d H:i'));
+        $sheet->setCellValue("A{$footerRow}", 'Generated by SmartQ · '.now()->format('Y-m-d H:i'));
         $this->applyStyle($sheet, "A{$footerRow}:G{$footerRow}", [
             'font' => ['italic' => true, 'size' => 8, 'color' => ['rgb' => $muted]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT],
@@ -230,7 +229,7 @@ class ReportsController extends Controller
         $sheet = $spreadsheet->createSheet();
         $sheet->setTitle('Ticket Detail');
 
-        $navy  = '0A1628';
+        $navy = '0A1628';
         $amber = 'F0800D';
         $white = 'FFFFFF';
         $light = 'FBF9F5';
@@ -253,15 +252,15 @@ class ReportsController extends Controller
             $sheet->setCellValue("{$col}1", $header);
         }
         $this->applyStyle($sheet, 'A1:J1', [
-            'font'      => ['bold' => true, 'size' => 10, 'color' => ['rgb' => $white]],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => $navy]],
+            'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => $white]],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => $navy]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-            'borders'   => ['bottom' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => $amber]]],
+            'borders' => ['bottom' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => $amber]]],
         ]);
         $sheet->getRowDimension(1)->setRowHeight(22);
 
         // Data rows
-        $row   = 2;
+        $row = 2;
         $altBg = false;
 
         foreach ($tickets as $ticket) {
@@ -279,19 +278,19 @@ class ReportsController extends Controller
             $sheet->setCellValue("J{$row}", $ticket['actual_service_minutes'] ?? '');
 
             $this->applyStyle($sheet, "A{$row}:J{$row}", [
-                'fill'      => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => $bg]],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => $bg]],
                 'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
             ]);
 
             // Status colour coding
             $statusColor = match ($ticket['status']) {
-                'completed'  => '1A7A50',
-                'cancelled'  => 'C0392B',
-                'missed'     => 'D35400',
+                'completed' => '1A7A50',
+                'cancelled' => 'C0392B',
+                'missed' => 'D35400',
                 'in_service' => '1A5276',
-                'on_hold'    => '6C3483',
-                'called'     => 'B7950B',
-                default      => '2C3E50',
+                'on_hold' => '6C3483',
+                'called' => 'B7950B',
+                default => '2C3E50',
             };
             $this->applyStyle($sheet, "E{$row}", [
                 'font' => ['bold' => true, 'color' => ['rgb' => $statusColor]],
@@ -304,11 +303,11 @@ class ReportsController extends Controller
 
             $sheet->getRowDimension($row)->setRowHeight(18);
             $row++;
-            $altBg = !$altBg;
+            $altBg = ! $altBg;
         }
 
         // Auto-filter on header row
-        $sheet->setAutoFilter("A1:J1");
+        $sheet->setAutoFilter('A1:J1');
 
         // Column widths
         foreach ([
@@ -344,7 +343,7 @@ class ReportsController extends Controller
         $sheet = $spreadsheet->createSheet();
         $sheet->setTitle('Teller Performance');
 
-        $navy  = '0A1628';
+        $navy = '0A1628';
         $amber = 'F0800D';
         $white = 'FFFFFF';
         $light = 'FBF9F5';
@@ -360,14 +359,14 @@ class ReportsController extends Controller
             $sheet->setCellValue("{$col}1", $header);
         }
         $this->applyStyle($sheet, 'A1:D1', [
-            'font'      => ['bold' => true, 'size' => 10, 'color' => ['rgb' => $white]],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => $navy]],
+            'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => $white]],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => $navy]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-            'borders'   => ['bottom' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => $amber]]],
+            'borders' => ['bottom' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => $amber]]],
         ]);
         $sheet->getRowDimension(1)->setRowHeight(22);
 
-        $row   = 2;
+        $row = 2;
         $altBg = false;
         foreach ($tellerStats as $i => $teller) {
             $bg = $altBg ? 'F0EFE9' : $light;
@@ -386,11 +385,11 @@ class ReportsController extends Controller
             $sheet->setCellValue("D{$row}", $teller['avg_service_time']);
 
             $this->applyStyle($sheet, "A{$row}:D{$row}", [
-                'fill'      => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => $bg]],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => $bg]],
                 'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
             ]);
             $this->applyStyle($sheet, "A{$row}", [
-                'font'      => ['bold' => true, 'color' => ['rgb' => $rankColor]],
+                'font' => ['bold' => true, 'color' => ['rgb' => $rankColor]],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ]);
             $this->applyStyle($sheet, "C{$row}:D{$row}", [
@@ -399,7 +398,7 @@ class ReportsController extends Controller
 
             $sheet->getRowDimension($row)->setRowHeight(20);
             $row++;
-            $altBg = !$altBg;
+            $altBg = ! $altBg;
         }
 
         // Totals row
@@ -409,8 +408,8 @@ class ReportsController extends Controller
             $sheet->setCellValue("C{$row}", "=AVERAGE(C2:C{$last})");
             $sheet->setCellValue("D{$row}", "=AVERAGE(D2:D{$last})");
             $this->applyStyle($sheet, "A{$row}:D{$row}", [
-                'font'    => ['bold' => true, 'color' => ['rgb' => $white]],
-                'fill'    => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => $navy]],
+                'font' => ['bold' => true, 'color' => ['rgb' => $white]],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => $navy]],
                 'borders' => ['top' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => $amber]]],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ]);
@@ -429,17 +428,17 @@ class ReportsController extends Controller
 
     // ─── Style helper ─────────────────────────────────────────────────────────
 
-    private function applyStyle(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet, string $range, array $style): void
+    private function applyStyle(Worksheet $sheet, string $range, array $style): void
     {
         $styleArray = [];
 
         if (isset($style['font'])) {
             $f = $style['font'];
             $styleArray['font'] = array_filter([
-                'bold'   => $f['bold']   ?? null,
+                'bold' => $f['bold'] ?? null,
                 'italic' => $f['italic'] ?? null,
-                'size'   => $f['size']   ?? null,
-                'color'  => isset($f['color']['rgb']) ? ['argb' => 'FF' . $f['color']['rgb']] : null,
+                'size' => $f['size'] ?? null,
+                'color' => isset($f['color']['rgb']) ? ['argb' => 'FF'.$f['color']['rgb']] : null,
             ]);
         }
 
@@ -447,7 +446,7 @@ class ReportsController extends Controller
             $fi = $style['fill'];
             $styleArray['fill'] = [
                 'fillType' => $fi['fillType'],
-                'startColor' => ['argb' => 'FF' . ($fi['color']['rgb'] ?? 'FFFFFF')],
+                'startColor' => ['argb' => 'FF'.($fi['color']['rgb'] ?? 'FFFFFF')],
             ];
         }
 
@@ -459,7 +458,7 @@ class ReportsController extends Controller
             foreach ($style['borders'] as $side => $border) {
                 $styleArray['borders'][$side] = [
                     'borderStyle' => $border['borderStyle'],
-                    'color'       => ['argb' => 'FF' . ($border['color']['rgb'] ?? '000000')],
+                    'color' => ['argb' => 'FF'.($border['color']['rgb'] ?? '000000')],
                 ];
             }
         }

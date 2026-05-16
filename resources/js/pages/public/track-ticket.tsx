@@ -1,3 +1,4 @@
+import { LanguageSwitcher } from '@/components/language-switcher';
 import { QueueProgressRail } from '@/components/media/queue-progress-rail';
 import { TicketArtifact } from '@/components/media/ticket-artifact';
 import { MetricFrame } from '@/components/system/metric-frame';
@@ -6,13 +7,12 @@ import { SectionHeading } from '@/components/system/section-heading';
 import { StatusOrb } from '@/components/system/status-orb';
 import { Surface } from '@/components/system/surface';
 import { Badge } from '@/components/ui/badge';
-import { LanguageSwitcher } from '@/components/language-switcher';
+import { useLocale } from '@/hooks/use-locale';
+import { fadeUp, staggerContainer } from '@/lib/motion';
 import { Head, Link, router } from '@inertiajs/react';
 import { MotionConfig, motion } from 'framer-motion';
-import { fadeUp, staggerContainer } from '@/lib/motion';
 import { BellRing, CheckCircle2, Clock3, Layers3, MapPin, ShieldAlert, Ticket, TimerReset, UserCircle2, Waves } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useLocale } from '@/hooks/use-locale';
 
 interface NowServingItem {
     id: number;
@@ -66,12 +66,12 @@ function CountdownRail({ seconds }: { seconds: number }) {
 
     return (
         <div className="space-y-2" data-testid="countdown-wrapper">
-            <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="text-muted-foreground flex items-center justify-between text-[11px] font-medium tracking-[0.18em] uppercase">
                 <span>{t('track.liveRefresh')}</span>
                 <span data-testid="countdown-text">{remaining}s</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-paper-soft hairline" data-testid="countdown-bar">
-                <div className="h-full rounded-full bg-gradient-amber transition-[width] duration-1000" style={{ width: `${progress}%` }} />
+            <div className="bg-paper-soft hairline h-2 overflow-hidden rounded-full" data-testid="countdown-bar">
+                <div className="bg-gradient-amber h-full rounded-full transition-[width] duration-1000" style={{ width: `${progress}%` }} />
             </div>
         </div>
     );
@@ -119,12 +119,17 @@ export default function TrackTicket({ ticket, position, waitingCount, nowServing
                                     <Layers3 className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">SmartQ</div>
-                                    <div className="text-xs text-muted-foreground">{t('track.subtitle')}</div>
+                                    <div className="text-primary text-sm font-semibold tracking-[0.24em] uppercase">SmartQ</div>
+                                    <div className="text-muted-foreground text-xs">{t('track.subtitle')}</div>
                                 </div>
                             </Link>
-                            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                                <StatusOrb tone={status.tone === 'red' ? 'red' : status.tone === 'green' ? 'green' : status.tone === 'amber' ? 'amber' : 'blue'} pulse={isActive} />
+                            <div className="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-[0.18em] uppercase">
+                                <StatusOrb
+                                    tone={
+                                        status.tone === 'red' ? 'red' : status.tone === 'green' ? 'green' : status.tone === 'amber' ? 'amber' : 'blue'
+                                    }
+                                    pulse={isActive}
+                                />
                                 {t(`status.${ticket.status}`)}
                             </div>
                             <LanguageSwitcher compact />
@@ -137,21 +142,30 @@ export default function TrackTicket({ ticket, position, waitingCount, nowServing
                                 <TicketArtifact>
                                     <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_0.36fr]">
                                         <div>
-                                            <div className="mb-4 flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
+                                            <div className="mb-4 flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-white/70 uppercase">
                                                 <Ticket className="h-3.5 w-3.5" />
                                                 {t('track.activeTicket')}
                                             </div>
-                                            <div className="text-[12px] uppercase tracking-[0.24em] text-white/48">{t('track.ticketCode')}</div>
-                                            <div className="mt-3 text-[clamp(4rem,14vw,6rem)] font-semibold leading-none tracking-[-0.08em] tabular-nums text-white" data-testid="ticket-code">
+                                            <div className="text-[12px] tracking-[0.24em] text-white/48 uppercase">{t('track.ticketCode')}</div>
+                                            <div
+                                                className="mt-3 text-[clamp(4rem,14vw,6rem)] leading-none font-semibold tracking-[-0.08em] text-white tabular-nums"
+                                                data-testid="ticket-code"
+                                            >
                                                 {ticket.display_code}
                                             </div>
                                             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-white/72">
-                                                <span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4" />{ticket.branch?.name ?? 'Branch'}</span>
-                                                <span className="inline-flex items-center gap-2"><UserCircle2 className="h-4 w-4" />{ticket.service_category?.name ?? 'Service'}</span>
+                                                <span className="inline-flex items-center gap-2">
+                                                    <MapPin className="h-4 w-4" />
+                                                    {ticket.branch?.name ?? 'Branch'}
+                                                </span>
+                                                <span className="inline-flex items-center gap-2">
+                                                    <UserCircle2 className="h-4 w-4" />
+                                                    {ticket.service_category?.name ?? 'Service'}
+                                                </span>
                                             </div>
                                         </div>
                                         <div className="rounded-[24px] border border-white/10 bg-white/[0.06] p-5">
-                                            <div className="text-[11px] uppercase tracking-[0.2em] text-white/48">{t('track.progress')}</div>
+                                            <div className="text-[11px] tracking-[0.2em] text-white/48 uppercase">{t('track.progress')}</div>
                                             <QueueProgressRail status={ticket.status} className="mt-4" />
                                         </div>
                                     </div>
@@ -161,7 +175,15 @@ export default function TrackTicket({ ticket, position, waitingCount, nowServing
                                     <div className={`rounded-[24px] border p-5 ${statusToneClass}`}>
                                         <div className="flex items-start gap-3">
                                             <div className="mt-0.5 rounded-full bg-white/60 p-2 dark:bg-white/8">
-                                                {status.tone === 'green' ? <CheckCircle2 className="h-5 w-5" /> : status.tone === 'amber' ? <BellRing className="h-5 w-5" /> : status.tone === 'red' ? <ShieldAlert className="h-5 w-5" /> : <Waves className="h-5 w-5" />}
+                                                {status.tone === 'green' ? (
+                                                    <CheckCircle2 className="h-5 w-5" />
+                                                ) : status.tone === 'amber' ? (
+                                                    <BellRing className="h-5 w-5" />
+                                                ) : status.tone === 'red' ? (
+                                                    <ShieldAlert className="h-5 w-5" />
+                                                ) : (
+                                                    <Waves className="h-5 w-5" />
+                                                )}
                                             </div>
                                             <div>
                                                 <h2 className="text-lg font-semibold tracking-[-0.03em]">{status.title}</h2>
@@ -172,13 +194,21 @@ export default function TrackTicket({ ticket, position, waitingCount, nowServing
 
                                     {(ticket.status === 'called' || ticket.status === 'in_service' || ticket.status === 'on_hold') && counterName && (
                                         <div className="mt-5 rounded-[24px] border border-amber-200/80 bg-[linear-gradient(180deg,rgba(255,248,234,0.98),rgba(255,242,216,0.98))] p-5 shadow-[0_14px_35px_rgba(201,145,39,0.14)] dark:border-amber-900/30 dark:bg-[linear-gradient(180deg,rgba(65,43,4,0.34),rgba(45,29,4,0.32))]">
-                                            <div className="text-[11px] uppercase tracking-[0.2em] text-amber-700/70 dark:text-amber-300/70">{t('track.assignedCounter')}</div>
-                                            <div className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-amber-950 dark:text-amber-100">{counterName}</div>
+                                            <div className="text-[11px] tracking-[0.2em] text-amber-700/70 uppercase dark:text-amber-300/70">
+                                                {t('track.assignedCounter')}
+                                            </div>
+                                            <div className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-amber-950 dark:text-amber-100">
+                                                {counterName}
+                                            </div>
                                             <p className="mt-2 text-sm text-amber-800/80 dark:text-amber-200/80">{t('track.assignedCounterHelp')}</p>
                                         </div>
                                     )}
 
-                                    {isActive && <div className="mt-5"><CountdownRail seconds={refreshSeconds} /></div>}
+                                    {isActive && (
+                                        <div className="mt-5">
+                                            <CountdownRail seconds={refreshSeconds} />
+                                        </div>
+                                    )}
                                 </Surface>
                             </motion.div>
 
@@ -192,13 +222,43 @@ export default function TrackTicket({ ticket, position, waitingCount, nowServing
                                     />
                                     <div className="grid gap-4 sm:grid-cols-2" data-testid="ticket-metrics-grid">
                                         {position !== null && ticket.status === 'waiting' ? (
-                                            <MetricFrame label={t('track.position')} value={`#${position}`} detail={t('track.positionDetail')} tone="default" valueTestId="ticket-position" />
+                                            <MetricFrame
+                                                label={t('track.position')}
+                                                value={`#${position}`}
+                                                detail={t('track.positionDetail')}
+                                                tone="default"
+                                                valueTestId="ticket-position"
+                                            />
                                         ) : (
-                                            <MetricFrame label={t('track.position')} value="Live" detail={t('track.livePositionDetail')} tone="green" valueTestId="ticket-position" />
+                                            <MetricFrame
+                                                label={t('track.position')}
+                                                value="Live"
+                                                detail={t('track.livePositionDetail')}
+                                                tone="green"
+                                                valueTestId="ticket-position"
+                                            />
                                         )}
-                                        <MetricFrame label={t('track.estimatedWait')} value={t('common.minutesShort', { count: ticket.estimated_wait_minutes ?? 0 })} detail={t('track.estimatedWaitDetail')} tone="amber" valueTestId="ticket-wait-time" icon={Clock3} />
-                                        <MetricFrame label={t('track.queueLoad')} value={waitingCount} detail={t('track.queueLoadDetail')} tone="default" icon={TimerReset} />
-                                        <MetricFrame label={t('track.serviceState')} value={t(`status.${ticket.status}`)} detail="Derived from live branch operations" tone={status.tone === 'red' ? 'red' : status.tone === 'green' ? 'green' : 'default'} />
+                                        <MetricFrame
+                                            label={t('track.estimatedWait')}
+                                            value={t('common.minutesShort', { count: ticket.estimated_wait_minutes ?? 0 })}
+                                            detail={t('track.estimatedWaitDetail')}
+                                            tone="amber"
+                                            valueTestId="ticket-wait-time"
+                                            icon={Clock3}
+                                        />
+                                        <MetricFrame
+                                            label={t('track.queueLoad')}
+                                            value={waitingCount}
+                                            detail={t('track.queueLoadDetail')}
+                                            tone="default"
+                                            icon={TimerReset}
+                                        />
+                                        <MetricFrame
+                                            label={t('track.serviceState')}
+                                            value={t(`status.${ticket.status}`)}
+                                            detail="Derived from live branch operations"
+                                            tone={status.tone === 'red' ? 'red' : status.tone === 'green' ? 'green' : 'default'}
+                                        />
                                     </div>
                                 </Surface>
 
@@ -206,7 +266,9 @@ export default function TrackTicket({ ticket, position, waitingCount, nowServing
                                     <Surface tone="default" className="p-5 sm:p-6" data-testid="now-serving-card">
                                         <div className="mb-4 flex items-center justify-between">
                                             <div>
-                                                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{t('track.nowServing')}</div>
+                                                <div className="text-muted-foreground text-[11px] font-semibold tracking-[0.2em] uppercase">
+                                                    {t('track.nowServing')}
+                                                </div>
                                                 <h3 className="mt-2 text-xl font-semibold tracking-[-0.04em]">{t('track.activeCounters')}</h3>
                                             </div>
                                             <Badge variant="secondary">{t('track.liveHall')}</Badge>
@@ -215,14 +277,29 @@ export default function TrackTicket({ ticket, position, waitingCount, nowServing
                                             {nowServing.map((item) => {
                                                 const isMe = item.id === ticket.id;
                                                 return (
-                                                    <div key={item.id} className={`flex items-center justify-between rounded-[20px] border px-4 py-3 ${isMe ? 'border-primary/24 bg-primary/10' : 'border-border/80 bg-background/72'}`}>
+                                                    <div
+                                                        key={item.id}
+                                                        className={`flex items-center justify-between rounded-[20px] border px-4 py-3 ${isMe ? 'border-primary/24 bg-primary/10' : 'border-border/80 bg-background/72'}`}
+                                                    >
                                                         <div>
-                                                            <div className={`text-2xl font-semibold tracking-[-0.05em] tabular-nums ${isMe ? 'text-primary' : 'text-foreground'}`}>{item.display_code}</div>
-                                                            <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{item.service_category?.name ?? t('track.serviceLane')}</div>
+                                                            <div
+                                                                className={`text-2xl font-semibold tracking-[-0.05em] tabular-nums ${isMe ? 'text-primary' : 'text-foreground'}`}
+                                                            >
+                                                                {item.display_code}
+                                                            </div>
+                                                            <div className="text-muted-foreground text-xs tracking-[0.18em] uppercase">
+                                                                {item.service_category?.name ?? t('track.serviceLane')}
+                                                            </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <div className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">{item.counter?.name ?? t('track.awaitingCounter')}</div>
-                                                            {isMe && <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{t('track.yourTicket')}</div>}
+                                                            <div className="bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-xs font-medium">
+                                                                {item.counter?.name ?? t('track.awaitingCounter')}
+                                                            </div>
+                                                            {isMe && (
+                                                                <div className="text-primary mt-2 text-[11px] font-semibold tracking-[0.18em] uppercase">
+                                                                    {t('track.yourTicket')}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 );

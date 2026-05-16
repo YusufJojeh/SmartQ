@@ -1,36 +1,13 @@
-import { KpiCard } from '@/components/kpi-card';
 import { EmptyState } from '@/components/empty-state';
-import { PageHeader } from '@/components/page-header';
+import { KpiCard } from '@/components/kpi-card';
 import { LiveIndicator } from '@/components/live-indicator';
+import { PageHeader } from '@/components/page-header';
+import { useLocale } from '@/hooks/use-locale';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { useLocale } from '@/hooks/use-locale';
-import {
-    Activity,
-    AlertTriangle,
-    BarChart3,
-    CheckCircle2,
-    Clock,
-    Timer,
-    TrendingUp,
-    Users,
-} from 'lucide-react';
-import {
-    Area,
-    AreaChart,
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Cell,
-    Legend,
-    Pie,
-    PieChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from 'recharts';
+import { Activity, AlertTriangle, BarChart3, CheckCircle2, Clock, Timer, TrendingUp, Users } from 'lucide-react';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 interface DashboardMetrics {
     today_total: number;
@@ -50,14 +27,14 @@ interface Props {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-    waiting:    'hsl(32 96% 52%)',
-    notified:   'hsl(189 88% 49%)',
-    called:     'hsl(40 96% 58%)',
+    waiting: 'hsl(32 96% 52%)',
+    notified: 'hsl(189 88% 49%)',
+    called: 'hsl(40 96% 58%)',
     in_service: 'hsl(152 56% 36%)',
-    on_hold:    'hsl(267 72% 63%)',
-    completed:  'hsl(216 13% 56%)',
-    cancelled:  'hsl(4 74% 49%)',
-    missed:     'hsl(18 94% 59%)',
+    on_hold: 'hsl(267 72% 63%)',
+    completed: 'hsl(216 13% 56%)',
+    cancelled: 'hsl(4 74% 49%)',
+    missed: 'hsl(18 94% 59%)',
 };
 
 interface ChartTooltipEntry {
@@ -75,8 +52,8 @@ interface ChartTooltipProps {
 function NexusTooltip({ active, payload, label }: ChartTooltipProps) {
     if (active && payload && payload.length) {
         return (
-            <div className="rounded-xl bg-ink px-4 py-3 text-paper shadow-elev text-xs">
-                {label && <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-paper/60">{label}</p>}
+            <div className="bg-ink text-paper shadow-elev rounded-xl px-4 py-3 text-xs">
+                {label && <p className="text-paper/60 mb-2 font-mono text-[10px] tracking-[0.15em] uppercase">{label}</p>}
                 {payload.map((p: ChartTooltipEntry) => (
                     <div key={String(p.dataKey)} className="flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
@@ -91,15 +68,11 @@ function NexusTooltip({ active, payload, label }: ChartTooltipProps) {
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-    return (
-        <div className="font-display text-xl text-ink">{children}</div>
-    );
+    return <div className="font-display text-ink text-xl">{children}</div>;
 }
 
 function SectionEyebrow({ children }: { children: React.ReactNode }) {
-    return (
-        <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{children}</div>
-    );
+    return <div className="text-muted-foreground font-mono text-[10px] tracking-[0.2em] uppercase">{children}</div>;
 }
 
 export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topServices, tellerPerformance }: Props) {
@@ -120,38 +93,31 @@ export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topSe
         Completed: d.completed,
     }));
 
-    const completionRate =
-        metrics.today_total > 0 ? Math.round((metrics.today_done / metrics.today_total) * 100) : 0;
+    const completionRate = metrics.today_total > 0 ? Math.round((metrics.today_done / metrics.today_total) * 100) : 0;
 
     const maxServiceVal = topServices[0]?.total ?? 1;
 
     const INITIALS = (name: string) =>
-        name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase();
+        name
+            .split(' ')
+            .slice(0, 2)
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase();
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={t('dashboard.title')} />
-            <div className="flex flex-col gap-6 p-4 sm:p-6 animate-fade-in">
-
+            <div className="animate-fade-in flex flex-col gap-6 p-4 sm:p-6">
                 {/* Page header */}
                 <div className="flex items-start justify-between gap-4">
-                    <PageHeader
-                        eyebrow="Today · Live"
-                        title={t('dashboard.title')}
-                        description={t('dashboard.description')}
-                        icon={BarChart3}
-                    />
+                    <PageHeader eyebrow="Today · Live" title={t('dashboard.title')} description={t('dashboard.description')} icon={BarChart3} />
                     <LiveIndicator className="mt-1 shrink-0" />
                 </div>
 
                 {/* KPI cards */}
-                <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
-                    <KpiCard
-                        title={t('dashboard.totalToday')}
-                        value={metrics.today_total}
-                        icon={Users}
-                        description={t('dashboard.ticketsIssued')}
-                    />
+                <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+                    <KpiCard title={t('dashboard.totalToday')} value={metrics.today_total} icon={Users} description={t('dashboard.ticketsIssued')} />
                     <KpiCard
                         title={t('common.completed')}
                         value={metrics.today_done}
@@ -181,17 +147,21 @@ export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topSe
                         {[
                             { label: t('dashboard.avgServiceTime'), value: metrics.avg_service + ' min', icon: Timer, color: 'text-accent' },
                             { label: t('dashboard.queueUtilization'), value: metrics.today_serving + '', icon: Activity, color: 'text-success' },
-                            { label: t('dashboard.backlog'), value: metrics.today_waiting + '', icon: TrendingUp,
-                              color: metrics.today_waiting > 20 ? 'text-destructive' : 'text-accent' },
+                            {
+                                label: t('dashboard.backlog'),
+                                value: metrics.today_waiting + '',
+                                icon: TrendingUp,
+                                color: metrics.today_waiting > 20 ? 'text-destructive' : 'text-accent',
+                            },
                         ].map((item) => {
                             const Icon = item.icon;
                             return (
-                                <div key={item.label} className="flex items-center gap-3 rounded-2xl hairline bg-card px-5 py-4 shadow-soft">
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-soft">
+                                <div key={item.label} className="hairline bg-card shadow-soft flex items-center gap-3 rounded-2xl px-5 py-4">
+                                    <div className="bg-accent-soft flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
                                         <Icon className={`h-4 w-4 ${item.color}`} />
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{item.label}</p>
+                                        <p className="text-muted-foreground font-mono text-[10px] tracking-[0.18em] uppercase">{item.label}</p>
                                         <p className={`font-display text-xl ${item.color}`}>{item.value}</p>
                                     </div>
                                 </div>
@@ -203,13 +173,13 @@ export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topSe
                 {/* Charts row */}
                 <div className="grid gap-5 lg:grid-cols-3">
                     {/* Area chart — throughput */}
-                    <div className="lg:col-span-2 rounded-2xl hairline bg-card p-5 shadow-soft">
-                        <div className="flex items-center justify-between mb-4">
+                    <div className="hairline bg-card shadow-soft rounded-2xl p-5 lg:col-span-2">
+                        <div className="mb-4 flex items-center justify-between">
                             <div>
                                 <SectionEyebrow>Throughput · today</SectionEyebrow>
                                 <SectionTitle>{t('dashboard.dailyVolume')}</SectionTitle>
                             </div>
-                            <div className="font-mono text-[10px] text-success flex items-center gap-1">
+                            <div className="text-success flex items-center gap-1 font-mono text-[10px]">
                                 <TrendingUp className="h-3.5 w-3.5" /> {completionRate}% completion
                             </div>
                         </div>
@@ -242,11 +212,18 @@ export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topSe
                     </div>
 
                     {/* Service load */}
-                    <div className="rounded-2xl hairline bg-card p-5 shadow-soft">
+                    <div className="hairline bg-card shadow-soft rounded-2xl p-5">
                         <SectionEyebrow>Service load</SectionEyebrow>
                         <SectionTitle>Where pressure is</SectionTitle>
                         {topServices.length === 0 ? (
-                            <div className="mt-4"><EmptyState icon={TrendingUp} title={t('dashboard.noService')} description={t('dashboard.noServiceDescription')} size="sm" /></div>
+                            <div className="mt-4">
+                                <EmptyState
+                                    icon={TrendingUp}
+                                    title={t('dashboard.noService')}
+                                    description={t('dashboard.noServiceDescription')}
+                                    size="sm"
+                                />
+                            </div>
                         ) : (
                             <ul className="mt-4 space-y-3">
                                 {topServices.map((s) => {
@@ -256,16 +233,16 @@ export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topSe
                                         <li key={s.service_category_id}>
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-ink truncate">{s.service_category?.name ?? t('common.unknown')}</span>
-                                                <span className="font-mono text-xs text-muted-foreground shrink-0 ml-2">{s.total}</span>
+                                                <span className="text-muted-foreground ml-2 shrink-0 font-mono text-xs">{s.total}</span>
                                             </div>
-                                            <div className="mt-1 h-1.5 rounded-full bg-paper-soft overflow-hidden">
+                                            <div className="bg-paper-soft mt-1 h-1.5 overflow-hidden rounded-full">
                                                 <div
                                                     className={`h-full transition-all duration-500 ${overloaded ? 'bg-destructive' : pct > 50 ? 'bg-accent' : 'bg-success'}`}
                                                     style={{ width: `${pct}%` }}
                                                 />
                                             </div>
                                             {overloaded && (
-                                                <div className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                                                <div className="text-destructive mt-1 flex items-center gap-1 text-[10px]">
                                                     <AlertTriangle className="h-3 w-3" /> Overloaded
                                                 </div>
                                             )}
@@ -279,8 +256,8 @@ export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topSe
 
                 {/* Status breakdown */}
                 {pieData.length > 0 && (
-                    <div className="rounded-2xl hairline bg-card p-5 shadow-soft">
-                        <div className="flex items-center justify-between mb-4">
+                    <div className="hairline bg-card shadow-soft rounded-2xl p-5">
+                        <div className="mb-4 flex items-center justify-between">
                             <div>
                                 <SectionEyebrow>{t('dashboard.statusTab')}</SectionEyebrow>
                                 <SectionTitle>{t('dashboard.statusDistribution')}</SectionTitle>
@@ -295,8 +272,10 @@ export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topSe
                                         ))}
                                     </Pie>
                                     <Tooltip content={<NexusTooltip />} />
-                                    <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}
-                                        formatter={(value) => value.charAt(0).toUpperCase() + value.slice(1)} />
+                                    <Legend
+                                        wrapperStyle={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}
+                                        formatter={(value) => value.charAt(0).toUpperCase() + value.slice(1)}
+                                    />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -304,8 +283,8 @@ export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topSe
                 )}
 
                 {/* Counter activity table */}
-                <div className="rounded-2xl hairline bg-card overflow-hidden shadow-soft">
-                    <div className="p-5 hairline-b flex items-center justify-between">
+                <div className="hairline bg-card shadow-soft overflow-hidden rounded-2xl">
+                    <div className="hairline-b flex items-center justify-between p-5">
                         <div>
                             <SectionEyebrow>{t('dashboard.tellerPerformanceDescription')}</SectionEyebrow>
                             <SectionTitle>{t('dashboard.tellerPerformance')}</SectionTitle>
@@ -319,26 +298,34 @@ export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topSe
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="hairline-b">
-                                    <th className="px-5 py-3 text-start font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t('dashboard.tellerTableRank')}</th>
-                                    <th className="px-5 py-3 text-start font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t('dashboard.tellerTableName')}</th>
-                                    <th className="px-5 py-3 text-end font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t('dashboard.tellerTableServed')}</th>
-                                    <th className="px-5 py-3 text-end font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t('dashboard.tellerTableAvg')}</th>
+                                    <th className="text-muted-foreground px-5 py-3 text-start font-mono text-[10px] tracking-[0.2em] uppercase">
+                                        {t('dashboard.tellerTableRank')}
+                                    </th>
+                                    <th className="text-muted-foreground px-5 py-3 text-start font-mono text-[10px] tracking-[0.2em] uppercase">
+                                        {t('dashboard.tellerTableName')}
+                                    </th>
+                                    <th className="text-muted-foreground px-5 py-3 text-end font-mono text-[10px] tracking-[0.2em] uppercase">
+                                        {t('dashboard.tellerTableServed')}
+                                    </th>
+                                    <th className="text-muted-foreground px-5 py-3 text-end font-mono text-[10px] tracking-[0.2em] uppercase">
+                                        {t('dashboard.tellerTableAvg')}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--hairline)]">
                                 {tellerPerformance.map((teller, idx) => (
                                     <tr key={teller.name} className="hover:bg-paper-soft/40 transition">
-                                        <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{idx + 1}</td>
+                                        <td className="text-muted-foreground px-5 py-3 font-mono text-xs">{idx + 1}</td>
                                         <td className="px-5 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent font-mono text-xs font-bold">
+                                                <div className="bg-accent-soft text-accent flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold">
                                                     {INITIALS(teller.name)}
                                                 </div>
-                                                <span className="font-medium text-ink">{teller.name}</span>
+                                                <span className="text-ink font-medium">{teller.name}</span>
                                             </div>
                                         </td>
-                                        <td className="px-5 py-3 text-end font-display text-lg tabular text-ink">{teller.completed}</td>
-                                        <td className="px-5 py-3 text-end font-mono text-xs text-muted-foreground">{teller.avg_time}m</td>
+                                        <td className="font-display tabular text-ink px-5 py-3 text-end text-lg">{teller.completed}</td>
+                                        <td className="text-muted-foreground px-5 py-3 text-end font-mono text-xs">{teller.avg_time}m</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -348,14 +335,17 @@ export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topSe
 
                 {/* Top services bar chart */}
                 {topServices.length > 0 && (
-                    <div className="rounded-2xl hairline bg-card p-5 shadow-soft">
+                    <div className="hairline bg-card shadow-soft rounded-2xl p-5">
                         <div className="mb-4">
                             <SectionEyebrow>{t('dashboard.topServices')}</SectionEyebrow>
                             <SectionTitle>{t('dashboard.topServicesDescription')}</SectionTitle>
                         </div>
                         <div className="h-48">
                             <ResponsiveContainer>
-                                <BarChart data={topServices.map(s => ({ name: s.service_category?.name ?? 'Unknown', tickets: s.total }))} margin={{ top: 0, right: 8, left: -20, bottom: 0 }}>
+                                <BarChart
+                                    data={topServices.map((s) => ({ name: s.service_category?.name ?? 'Unknown', tickets: s.total }))}
+                                    margin={{ top: 0, right: 8, left: -20, bottom: 0 }}
+                                >
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" vertical={false} />
                                     <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(222 16% 38%)' }} axisLine={false} tickLine={false} />
                                     <YAxis tick={{ fontSize: 11, fill: 'hsl(222 16% 38%)' }} axisLine={false} tickLine={false} />
@@ -366,7 +356,6 @@ export default function Dashboard({ metrics, dailyVolume, statusBreakdown, topSe
                         </div>
                     </div>
                 )}
-
             </div>
         </AppLayout>
     );

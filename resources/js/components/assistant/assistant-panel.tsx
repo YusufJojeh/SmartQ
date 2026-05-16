@@ -1,7 +1,7 @@
 'use client';
 
-import { buildAssistantContext } from '@/lib/assistant-context';
 import { useLocale } from '@/hooks/use-locale';
+import { buildAssistantContext } from '@/lib/assistant-context';
 import { cn } from '@/lib/utils';
 import type { AssistantMessage, AssistantResponse, SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
@@ -152,31 +152,26 @@ export function AssistantPanel({ scope }: AssistantPanelProps) {
     /* ── Render ─────────────────────────────────────────────────────── */
     const headerLabel = scope === 'public' ? t('assistant.publicLabel') : t('assistant.operationsLabel');
     const headerTitle = scope === 'public' ? t('assistant.publicTitle') : t('assistant.operationsTitle');
-    const headerSub   = scope === 'public' ? t('assistant.publicSubtitle') : t('assistant.operationsSubtitle');
-    const inputPlaceholder = scope === 'public'
-        ? t('assistant.inputPlaceholderPublic')
-        : t('assistant.inputPlaceholderOperations');
+    const headerSub = scope === 'public' ? t('assistant.publicSubtitle') : t('assistant.operationsSubtitle');
+    const inputPlaceholder = scope === 'public' ? t('assistant.inputPlaceholderPublic') : t('assistant.inputPlaceholderOperations');
 
     return (
         <div className={cn('flex h-full flex-col', isRtl && 'direction-rtl')}>
-
             {/* ── Header ─────────────────────────────────────────────── */}
-            <div className={cn('hairline-b px-5 py-4 flex items-start gap-3', isRtl ? 'flex-row-reverse' : '')}>
-                <div className="flex-1 min-w-0">
-                    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-0.5">
-                        {headerLabel}
-                    </div>
-                    <h2 className="font-display text-xl text-ink leading-tight">{headerTitle}</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{headerSub}</p>
+            <div className={cn('hairline-b flex items-start gap-3 px-5 py-4', isRtl ? 'flex-row-reverse' : '')}>
+                <div className="min-w-0 flex-1">
+                    <div className="text-muted-foreground mb-0.5 font-mono text-[10px] tracking-[0.2em] uppercase">{headerLabel}</div>
+                    <h2 className="font-display text-ink text-xl leading-tight">{headerTitle}</h2>
+                    <p className="text-muted-foreground mt-0.5 truncate text-xs">{headerSub}</p>
                 </div>
                 <div className={cn('flex shrink-0 items-center gap-2', isRtl && 'flex-row-reverse')}>
                     {providerStatus?.provider && (
-                        <div className="rounded-full bg-accent-soft px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.18em] text-accent">
+                        <div className="bg-accent-soft text-accent rounded-full px-2.5 py-1 font-mono text-[9px] tracking-[0.18em] uppercase">
                             {providerStatus.provider}
                             {providerStatus.fallback && ` · ${t('assistant.providerFallback')}`}
                         </div>
                     )}
-                    <div className="rounded-full bg-success/10 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.18em] text-success">
+                    <div className="bg-success/10 text-success rounded-full px-2.5 py-1 font-mono text-[9px] tracking-[0.18em] uppercase">
                         {t('assistant.readOnly')}
                     </div>
                 </div>
@@ -188,13 +183,13 @@ export function AssistantPanel({ scope }: AssistantPanelProps) {
                     {messages.length === 0 ? (
                         /* Empty state */
                         <div className="flex h-full min-h-[240px] flex-col items-center justify-center px-6 text-center">
-                            <div className="font-display text-2xl text-ink mb-2">{t('assistant.emptyTitle')}</div>
-                            <p className="max-w-sm text-sm text-muted-foreground mb-8">{t(emptyKey)}</p>
+                            <div className="font-display text-ink mb-2 text-2xl">{t('assistant.emptyTitle')}</div>
+                            <p className="text-muted-foreground mb-8 max-w-sm text-sm">{t(emptyKey)}</p>
 
                             {/* Suggested prompt chips */}
                             {suggestedPrompts.length > 0 && (
                                 <div className="w-full max-w-md">
-                                    <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground mb-3">
+                                    <div className="text-muted-foreground mb-3 font-mono text-[9px] tracking-[0.18em] uppercase">
                                         {t('assistant.suggestionsLabel')}
                                     </div>
                                     <div className="flex flex-wrap justify-center gap-2">
@@ -205,9 +200,9 @@ export function AssistantPanel({ scope }: AssistantPanelProps) {
                                                 onClick={() => void submitMessage(prompt)}
                                                 disabled={loading}
                                                 className={cn(
-                                                    'rounded-xl hairline bg-card px-3 py-2 text-left text-sm text-ink shadow-soft',
-                                                    'hover:shadow-elev hover:-translate-y-0.5 hover:border-accent/30 transition',
-                                                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                                                    'hairline bg-card text-ink shadow-soft rounded-xl px-3 py-2 text-left text-sm',
+                                                    'hover:shadow-elev hover:border-accent/30 transition hover:-translate-y-0.5',
+                                                    'disabled:cursor-not-allowed disabled:opacity-50',
                                                     isRtl && 'text-right',
                                                 )}
                                             >
@@ -231,16 +226,18 @@ export function AssistantPanel({ scope }: AssistantPanelProps) {
 
             {/* ── Error banner ─────────────────────────────────────────── */}
             {error && (
-                <div className={cn(
-                    'mx-4 mb-2 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3',
-                    isRtl && 'flex-row-reverse text-right',
-                )}>
-                    <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
-                    <p className="flex-1 text-sm text-destructive">{error}</p>
+                <div
+                    className={cn(
+                        'border-destructive/30 bg-destructive/8 mx-4 mb-2 flex items-start gap-3 rounded-xl border px-4 py-3',
+                        isRtl && 'flex-row-reverse text-right',
+                    )}
+                >
+                    <AlertCircle className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
+                    <p className="text-destructive flex-1 text-sm">{error}</p>
                     <button
                         type="button"
                         onClick={() => setError(null)}
-                        className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/20 transition"
+                        className="bg-destructive/10 text-destructive hover:bg-destructive/20 inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition"
                     >
                         <RefreshCw className="h-3 w-3" />
                         {t('assistant.errorRetry')}
@@ -249,16 +246,14 @@ export function AssistantPanel({ scope }: AssistantPanelProps) {
             )}
 
             {/* ── Input ────────────────────────────────────────────────── */}
-            <div className={cn('hairline-t px-4 pt-3 pb-4 bg-paper/50')}>
-                <PromptInput
-                    onSubmit={submitMessage}
-                    disabled={loading}
-                    placeholder={inputPlaceholder}
-                />
-                <p className={cn(
-                    'mt-2 font-mono text-[9px] text-muted-foreground/60 uppercase tracking-[0.14em]',
-                    isRtl ? 'text-right' : 'text-center',
-                )}>
+            <div className={cn('hairline-t bg-paper/50 px-4 pt-3 pb-4')}>
+                <PromptInput onSubmit={submitMessage} disabled={loading} placeholder={inputPlaceholder} />
+                <p
+                    className={cn(
+                        'text-muted-foreground/60 mt-2 font-mono text-[9px] tracking-[0.14em] uppercase',
+                        isRtl ? 'text-right' : 'text-center',
+                    )}
+                >
                     {t('assistant.ctrlEnterHint')} · {t('assistant.readOnlyNote')}
                 </p>
             </div>

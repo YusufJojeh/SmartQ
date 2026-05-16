@@ -22,7 +22,7 @@ export default function CounterDialog({
     onOpenChange,
 }: {
     counter: CounterProps | null;
-    branches: {id: number, name: string}[];
+    branches: { id: number; name: string }[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
@@ -47,7 +47,7 @@ export default function CounterDialog({
                 });
             } else {
                 reset();
-                if(branches.length) setData('branch_id', branches[0].id);
+                if (branches.length) setData('branch_id', branches[0].id);
             }
         }
     }, [branches, clearErrors, counter, open, reset, setData]);
@@ -67,27 +67,34 @@ export default function CounterDialog({
                 <form onSubmit={submit}>
                     <DialogHeader>
                         <DialogTitle>{isEdit ? t('management.editCounter') : t('management.addCounterDialog')}</DialogTitle>
-                        <DialogDescription>
-                            {t('management.counterDescription')}
-                        </DialogDescription>
+                        <DialogDescription>{t('management.counterDescription')}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         {branches.length > 0 && (
                             <div className="grid gap-2">
                                 <Label>{t('common.branch')}</Label>
-                                <select 
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                                    value={data.branch_id} 
+                                <select
+                                    className="border-input bg-background ring-offset-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
+                                    value={data.branch_id}
                                     onChange={(e) => setData('branch_id', parseInt(e.target.value))}
                                 >
-                                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                    {branches.map((b) => (
+                                        <option key={b.id} value={b.id}>
+                                            {b.name}
+                                        </option>
+                                    ))}
                                 </select>
                                 {errors.branch_id && <p className="text-sm text-red-500">{errors.branch_id}</p>}
                             </div>
                         )}
                         <div className="grid gap-2">
                             <Label htmlFor="name">{t('management.counterName')}</Label>
-                            <Input id="name" value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder={t('management.counterPlaceholder')} />
+                            <Input
+                                id="name"
+                                value={data.name}
+                                onChange={(e) => setData('name', e.target.value)}
+                                placeholder={t('management.counterPlaceholder')}
+                            />
                             {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
                         </div>
                         <div className="grid gap-2">
@@ -95,14 +102,20 @@ export default function CounterDialog({
                             <Input id="code" value={data.code} onChange={(e) => setData('code', e.target.value)} />
                             {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
                         </div>
-                        <div className="flex items-center justify-between mt-2">
-                            <Label htmlFor="active" className="cursor-pointer">{t('management.activeStatus')}</Label>
+                        <div className="mt-2 flex items-center justify-between">
+                            <Label htmlFor="active" className="cursor-pointer">
+                                {t('management.activeStatus')}
+                            </Label>
                             <Switch id="active" checked={data.is_active} onCheckedChange={(c) => setData('is_active', c)} />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
-                        <Button type="submit" disabled={processing}>{isEdit ? t('common.saveChanges') : t('common.create')}</Button>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button type="submit" disabled={processing}>
+                            {isEdit ? t('common.saveChanges') : t('common.create')}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

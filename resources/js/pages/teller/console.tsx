@@ -11,20 +11,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Counter, type QueueTicket } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import axios, { AxiosError } from 'axios';
-import {
-    AlertCircle,
-    CheckCircle2,
-    ChevronRight,
-    Clock,
-    Cpu,
-    Inbox,
-    Loader2,
-    PauseCircle,
-    PhoneCall,
-    RefreshCw,
-    Users,
-    X,
-} from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronRight, Clock, Cpu, Inbox, Loader2, PauseCircle, PhoneCall, RefreshCw, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Teller Console', href: '/teller' }];
@@ -62,17 +49,15 @@ function WaitingRow({ ticket, position }: { ticket: QueueTicket; position: numbe
     return (
         <div
             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors ${
-                ticket.priority_level <= 2
-                    ? 'border border-accent/30 bg-accent-soft/60'
-                    : 'hairline bg-card'
+                ticket.priority_level <= 2 ? 'border-accent/30 bg-accent-soft/60 border' : 'hairline bg-card'
             }`}
         >
-            <span className="w-5 shrink-0 text-center text-xs font-semibold text-muted-foreground">{position}</span>
+            <span className="text-muted-foreground w-5 shrink-0 text-center text-xs font-semibold">{position}</span>
 
             {ticket.priority_level <= 2 ? (
                 <div className="h-full w-0.5 self-stretch rounded-full bg-amber-400" />
             ) : (
-                <div className="h-full w-0.5 self-stretch rounded-full bg-border" />
+                <div className="bg-border h-full w-0.5 self-stretch rounded-full" />
             )}
 
             <div className="min-w-0 flex-1">
@@ -80,7 +65,7 @@ function WaitingRow({ ticket, position }: { ticket: QueueTicket; position: numbe
                     <span className="font-mono text-sm font-bold">{ticket.display_code}</span>
                     {ticket.priority_level <= 2 && <PriorityBadge level={ticket.priority_level} showLabel={false} />}
                 </div>
-                <div className="truncate text-[11px] text-muted-foreground">{ticket.service_category?.name ?? t('teller.unknownService')}</div>
+                <div className="text-muted-foreground truncate text-[11px]">{ticket.service_category?.name ?? t('teller.unknownService')}</div>
             </div>
 
             <div
@@ -132,9 +117,7 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
     }
 
     const getErrorMessage = (errorValue: unknown, fallback: string) =>
-        errorValue instanceof AxiosError
-            ? (errorValue.response?.data as TellerActionError | undefined)?.message ?? fallback
-            : fallback;
+        errorValue instanceof AxiosError ? ((errorValue.response?.data as TellerActionError | undefined)?.message ?? fallback) : fallback;
 
     const callNext = useCallback(async () => {
         setLoadingFor('call');
@@ -258,9 +241,7 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
         return () => window.removeEventListener('keydown', handler);
     }, [callNext, isIdle, loading]);
 
-    const calledMinutes = activeTicket?.called_at
-        ? Math.floor((Date.now() - new Date(activeTicket.called_at).getTime()) / 60000)
-        : 0;
+    const calledMinutes = activeTicket?.called_at ? Math.floor((Date.now() - new Date(activeTicket.called_at).getTime()) / 60000) : 0;
 
     const serviceMinutes = activeTicket?.service_started_at
         ? Math.floor((Date.now() - new Date(activeTicket.service_started_at).getTime()) / 60000)
@@ -270,8 +251,8 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
         ? isCalled
             ? t('teller.calledDescription')
             : isOnHold
-                ? t('teller.heldDescription')
-                : t('teller.activeDescription')
+              ? t('teller.heldDescription')
+              : t('teller.activeDescription')
         : t('teller.noActiveCustomer');
 
     return (
@@ -300,11 +281,11 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
                 />
 
                 {error && (
-                    <div className="slide-down flex items-center gap-2.5 rounded-lg border border-destructive/25 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+                    <div className="slide-down border-destructive/25 bg-destructive/8 text-destructive flex items-center gap-2.5 rounded-lg border px-4 py-3 text-sm">
                         <AlertCircle className="h-4 w-4 shrink-0" />
                         <span className="flex-1">{error}</span>
                         <button
-                            className="ml-1 rounded p-0.5 transition-colors hover:bg-destructive/10"
+                            className="hover:bg-destructive/10 ml-1 rounded p-0.5 transition-colors"
                             onClick={dismissError}
                             aria-label="Dismiss error"
                         >
@@ -315,33 +296,40 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
 
                 <div className="grid gap-5 lg:grid-cols-3 xl:grid-cols-[1fr_1fr_320px]">
                     <div className="space-y-4 lg:col-span-2">
-                        <div className={`rounded-2xl overflow-hidden transition-all ${activeTicket ? 'hairline shadow-elev' : 'hairline shadow-soft'}`}>
+                        <div
+                            className={`overflow-hidden rounded-2xl transition-all ${activeTicket ? 'hairline shadow-elev' : 'hairline shadow-soft'}`}
+                        >
                             <div className={`h-1 w-full ${activeTicket ? 'bg-accent' : 'bg-hairline'}`} />
 
                             <div className="p-5">
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="mb-1 flex items-center gap-2">
                                     <PhoneCall className={`h-4 w-4 ${activeTicket ? 'text-accent' : 'text-muted-foreground'}`} />
-                                    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t('teller.activeTicket')}</div>
+                                    <div className="text-muted-foreground font-mono text-[10px] tracking-[0.2em] uppercase">
+                                        {t('teller.activeTicket')}
+                                    </div>
                                     {activeTicket && <LiveIndicator size="sm" label="" className="ml-auto" />}
                                 </div>
-                                <p className="text-xs text-muted-foreground mb-4">{activeDescription}</p>
+                                <p className="text-muted-foreground mb-4 text-xs">{activeDescription}</p>
 
                                 {activeTicket ? (
                                     <div className="space-y-5">
-                                        <div className="relative overflow-hidden rounded-2xl bg-ink px-6 py-7 text-center text-paper shadow-elev">
-                                            <div className="pointer-events-none absolute inset-0 grid-display opacity-20" />
+                                        <div className="bg-ink text-paper shadow-elev relative overflow-hidden rounded-2xl px-6 py-7 text-center">
+                                            <div className="grid-display pointer-events-none absolute inset-0 opacity-20" />
                                             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(32_96%_52%_/0.18),transparent_60%)]" />
 
                                             <div className="relative">
-                                                <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-paper/55">
+                                                <div className="text-paper/55 mb-2 font-mono text-[10px] tracking-[0.22em] uppercase">
                                                     {t('teller.nowServing')}
                                                 </div>
-                                                <div className="font-display text-8xl leading-none tabular text-paper" data-testid="active-ticket-code">
+                                                <div
+                                                    className="font-display tabular text-paper text-8xl leading-none"
+                                                    data-testid="active-ticket-code"
+                                                >
                                                     {activeTicket.display_code}
                                                 </div>
-                                                <div className="mt-3 text-sm text-paper/70">{activeTicket.service_category?.name}</div>
+                                                <div className="text-paper/70 mt-3 text-sm">{activeTicket.service_category?.name}</div>
                                                 {activeTicket.customer_name && (
-                                                    <div className="mt-1 text-sm font-medium text-paper/90">{activeTicket.customer_name}</div>
+                                                    <div className="text-paper/90 mt-1 text-sm font-medium">{activeTicket.customer_name}</div>
                                                 )}
 
                                                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -358,7 +346,7 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
                                                     )}
                                                     {isCalled && (
                                                         <span
-                                                            className="inline-flex items-center gap-1 rounded-full bg-paper/15 px-2 py-0.5 text-xs text-paper/80 ring-1 ring-paper/20"
+                                                            className="bg-paper/15 text-paper/80 ring-paper/20 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ring-1"
                                                             data-testid="called-timer"
                                                         >
                                                             <Clock className="h-3 w-3" />
@@ -367,7 +355,7 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
                                                     )}
                                                     {(isInService || isOnHold) && (
                                                         <span
-                                                            className="inline-flex items-center gap-1 rounded-full bg-paper/15 px-2 py-0.5 text-xs text-paper/80 ring-1 ring-paper/20"
+                                                            className="bg-paper/15 text-paper/80 ring-paper/20 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ring-1"
                                                             data-testid="service-timer"
                                                         >
                                                             <Clock className="h-3 w-3" />
@@ -436,11 +424,7 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
                                                     onClick={cancelTicket}
                                                     disabled={loading !== null}
                                                 >
-                                                    {loading === 'cancel' ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                    ) : (
-                                                        <X className="h-4 w-4" />
-                                                    )}
+                                                    {loading === 'cancel' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                                                     {t('common.cancel')}
                                                 </Button>
                                             )}
@@ -449,24 +433,24 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
                                 ) : (
                                     <div className="flex flex-col items-center py-10 text-center">
                                         <div className="relative mb-5">
-                                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-paper-soft hairline">
-                                                <Inbox className="h-8 w-8 text-muted-foreground/50" />
+                                            <div className="bg-paper-soft hairline flex h-16 w-16 items-center justify-center rounded-full">
+                                                <Inbox className="text-muted-foreground/50 h-8 w-8" />
                                             </div>
                                             {waitingList.length > 0 && (
-                                                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-ink">
+                                                <span className="bg-accent text-ink absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold">
                                                     {waitingList.length}
                                                 </span>
                                             )}
                                         </div>
-                                        <p className="font-display text-xl text-ink">{t('teller.idleTitle')}</p>
-                                        <p className="mt-1 text-sm text-muted-foreground">
+                                        <p className="font-display text-ink text-xl">{t('teller.idleTitle')}</p>
+                                        <p className="text-muted-foreground mt-1 text-sm">
                                             {waitingList.length > 0
-                                                ? t(waitingList.length === 1 ? 'teller.idleWaiting' : 'teller.idleWaitingPlural', { count: waitingList.length })
+                                                ? t(waitingList.length === 1 ? 'teller.idleWaiting' : 'teller.idleWaitingPlural', {
+                                                      count: waitingList.length,
+                                                  })
                                                 : t('teller.idleEmpty')}
                                         </p>
-                                        <p className="mt-3 text-xs text-muted-foreground/60">
-                                            {t('teller.idleHint')}
-                                        </p>
+                                        <p className="text-muted-foreground/60 mt-3 text-xs">{t('teller.idleHint')}</p>
                                     </div>
                                 )}
                             </div>
@@ -479,11 +463,7 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
                             disabled={loading !== null || !isIdle}
                             variant={isIdle ? 'default' : 'outline'}
                         >
-                            {loading === 'call' ? (
-                                <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : (
-                                <ChevronRight className="h-5 w-5" />
-                            )}
+                            {loading === 'call' ? <Loader2 className="h-5 w-5 animate-spin" /> : <ChevronRight className="h-5 w-5" />}
                             {isIdle ? t('teller.callNext') : t('teller.finishFirst')}
                         </Button>
 
@@ -493,46 +473,42 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
                                 { label: 'Serving', value: activeTicket ? 1 : 0, accent: 'text-success', bg: 'bg-success/10' },
                                 { label: 'Done Today', value: completedToday, accent: 'text-ink', bg: 'bg-paper-soft' },
                             ].map((stat) => (
-                                <div key={stat.label} className={`rounded-xl hairline px-3 py-3 text-center ${stat.bg}`}>
+                                <div key={stat.label} className={`hairline rounded-xl px-3 py-3 text-center ${stat.bg}`}>
                                     <div
-                                        className={`font-display text-3xl tabular ${stat.accent}`}
+                                        className={`font-display tabular text-3xl ${stat.accent}`}
                                         data-testid={`stat-value-${stat.label.toLowerCase().replace(' ', '-')}`}
                                     >
                                         {stat.value}
                                     </div>
-                                    <div className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{stat.label}</div>
+                                    <div className="text-muted-foreground mt-0.5 font-mono text-[9px] tracking-[0.18em] uppercase">{stat.label}</div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div className="h-fit lg:sticky lg:top-6 rounded-2xl hairline bg-card shadow-soft overflow-hidden" data-testid="waiting-queue-card">
-                        <div className="p-5 hairline-b">
+                    <div
+                        className="hairline bg-card shadow-soft h-fit overflow-hidden rounded-2xl lg:sticky lg:top-6"
+                        data-testid="waiting-queue-card"
+                    >
+                        <div className="hairline-b p-5">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t('teller.queue')}</div>
+                                    <Users className="text-muted-foreground h-4 w-4" />
+                                    <div className="text-muted-foreground font-mono text-[10px] tracking-[0.2em] uppercase">{t('teller.queue')}</div>
                                 </div>
-                                <div className="rounded-full bg-accent-soft px-2.5 py-0.5 font-mono text-[10px] tabular text-accent">
+                                <div className="bg-accent-soft tabular text-accent rounded-full px-2.5 py-0.5 font-mono text-[10px]">
                                     {waitingList.length}
                                 </div>
                             </div>
-                            <p className="mt-1 text-xs text-muted-foreground">Waiting for their turn</p>
+                            <p className="text-muted-foreground mt-1 text-xs">Waiting for their turn</p>
                         </div>
 
                         <ScrollArea className="h-[440px]">
                             <div className="space-y-1.5 p-3">
                                 {waitingList.length === 0 ? (
-                                    <EmptyState
-                                        icon={Inbox}
-                                        title="Queue is empty"
-                                        description="No customers waiting at this moment."
-                                        size="sm"
-                                    />
+                                    <EmptyState icon={Inbox} title="Queue is empty" description="No customers waiting at this moment." size="sm" />
                                 ) : (
-                                    waitingList.map((ticket, index) => (
-                                        <WaitingRow key={ticket.id} ticket={ticket} position={index + 1} />
-                                    ))
+                                    waitingList.map((ticket, index) => <WaitingRow key={ticket.id} ticket={ticket} position={index + 1} />)
                                 )}
                             </div>
                         </ScrollArea>

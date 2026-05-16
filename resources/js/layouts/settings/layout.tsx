@@ -1,7 +1,7 @@
 import Heading from '@/components/heading';
-import { useLocale } from '@/hooks/use-locale';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useLocale } from '@/hooks/use-locale';
 import { cn } from '@/lib/utils';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';

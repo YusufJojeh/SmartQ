@@ -11,7 +11,7 @@ class BranchFactory extends Factory
         $cities = ['Riyadh', 'Jeddah', 'Dammam', 'Mecca', 'Medina', 'Khobar', 'Tabuk', 'Abha'];
 
         return [
-            'name' => $this->faker->company() . ' Branch',
+            'name' => $this->faker->company().' Branch',
             'code' => strtoupper($this->faker->unique()->lexify('BR???')),
             'address' => $this->faker->streetAddress(),
             'city' => $this->faker->randomElement($cities),

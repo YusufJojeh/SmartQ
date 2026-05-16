@@ -15,7 +15,7 @@ interface UserProps {
     branch_id: number | null;
     counter_id: number | null;
     is_active: boolean;
-    roles: {name: string}[];
+    roles: { name: string }[];
 }
 
 export default function UserDialog({
@@ -27,9 +27,9 @@ export default function UserDialog({
     onOpenChange,
 }: {
     user: UserProps | null;
-    branches: {id: number, name: string}[];
-    counters: {id: number, name: string, branch_id: number}[];
-    roles: {name: string}[];
+    branches: { id: number; name: string }[];
+    counters: { id: number; name: string; branch_id: number }[];
+    roles: { name: string }[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
@@ -94,7 +94,7 @@ export default function UserDialog({
         }
     };
 
-    const eligibleCounters = counters.filter(c => c.branch_id === data.branch_id);
+    const eligibleCounters = counters.filter((c) => c.branch_id === data.branch_id);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,11 +102,9 @@ export default function UserDialog({
                 <form onSubmit={submit}>
                     <DialogHeader>
                         <DialogTitle>{isEdit ? t('management.editUser') : t('management.addUserDialog')}</DialogTitle>
-                        <DialogDescription>
-                            {t('management.userDescription')}
-                        </DialogDescription>
+                        <DialogDescription>{t('management.userDescription')}</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                    <div className="grid max-h-[60vh] gap-4 overflow-y-auto py-4">
                         <div className="grid gap-2">
                             <Label htmlFor="name">{t('common.name')}</Label>
                             <Input id="name" value={data.name} onChange={(e) => setData('name', e.target.value)} />
@@ -124,26 +122,34 @@ export default function UserDialog({
                         </div>
                         <div className="grid gap-2">
                             <Label>{t('management.role')}</Label>
-                            <select 
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                                value={data.role} 
+                            <select
+                                className="border-input bg-background ring-offset-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
+                                value={data.role}
                                 onChange={(e) => setData('role', e.target.value)}
                             >
-                                {roles.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
+                                {roles.map((r) => (
+                                    <option key={r.name} value={r.name}>
+                                        {r.name}
+                                    </option>
+                                ))}
                             </select>
                             {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
                         </div>
-                        
+
                         {(data.role === 'teller' || data.role === 'manager') && (
                             <div className="grid gap-2">
                                 <Label>{t('management.assignedBranch')}</Label>
-                                <select 
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                                    value={data.branch_id || ''} 
+                                <select
+                                    className="border-input bg-background ring-offset-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
+                                    value={data.branch_id || ''}
                                     onChange={(e) => setData('branch_id', parseInt(e.target.value) || '')}
                                 >
                                     <option value="">{t('management.selectBranch')}</option>
-                                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                    {branches.map((b) => (
+                                        <option key={b.id} value={b.id}>
+                                            {b.name}
+                                        </option>
+                                    ))}
                                 </select>
                                 {errors.branch_id && <p className="text-sm text-red-500">{errors.branch_id}</p>}
                             </div>
@@ -152,24 +158,34 @@ export default function UserDialog({
                         {data.role === 'teller' && data.branch_id && (
                             <div className="grid gap-2">
                                 <Label>{t('management.assignedCounterOptional')}</Label>
-                                <select 
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                                    value={data.counter_id || ''} 
+                                <select
+                                    className="border-input bg-background ring-offset-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
+                                    value={data.counter_id || ''}
                                     onChange={(e) => setData('counter_id', parseInt(e.target.value) || '')}
                                 >
                                     <option value="">{t('management.anyCounter')}</option>
-                                    {eligibleCounters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    {eligibleCounters.map((c) => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.name}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                         )}
-                        <div className="flex items-center justify-between mt-2">
-                            <Label htmlFor="active" className="cursor-pointer">{t('management.activeStatus')}</Label>
+                        <div className="mt-2 flex items-center justify-between">
+                            <Label htmlFor="active" className="cursor-pointer">
+                                {t('management.activeStatus')}
+                            </Label>
                             <Switch id="active" checked={data.is_active} onCheckedChange={(c) => setData('is_active', c)} />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
-                        <Button type="submit" disabled={processing}>{isEdit ? t('common.saveChanges') : t('common.create')}</Button>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button type="submit" disabled={processing}>
+                            {isEdit ? t('common.saveChanges') : t('common.create')}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

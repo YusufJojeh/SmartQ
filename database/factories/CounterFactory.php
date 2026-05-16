@@ -11,8 +11,8 @@ class CounterFactory extends Factory
     {
         return [
             'branch_id' => Branch::factory(),
-            'name' => 'Counter ' . $this->faker->numberBetween(1, 20),
-            'code' => 'C' . $this->faker->unique()->numberBetween(1, 99),
+            'name' => 'Counter '.$this->faker->numberBetween(1, 20),
+            'code' => 'C'.$this->faker->unique()->numberBetween(1, 99),
             'is_active' => true,
         ];
     }

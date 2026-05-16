@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { useInView, useMotionValue, useSpring } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useInView, useMotionValue, useSpring } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
 
 interface AnimatedCounterProps {
     value: number;
@@ -24,7 +24,8 @@ export function AnimatedCounter({ value, suffix = '', className, duration = 1.2 
 
     return (
         <span ref={ref} className={cn('tabular', className)}>
-            {display}{suffix}
+            {display}
+            {suffix}
         </span>
     );
 }
