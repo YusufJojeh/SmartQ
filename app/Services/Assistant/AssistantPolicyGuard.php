@@ -6,41 +6,71 @@ use App\Models\User;
 
 class AssistantPolicyGuard
 {
+    private const PUBLIC_TOOLS = [
+        'ticket.status',
+    ];
+
+    private const TELLER_TOOLS = [
+        'ticket.status',
+        'queue.status',
+        'branch.load',
+        'counters.status',
+        'delay.explain',
+        'policy.read',
+    ];
+
+    private const MANAGER_TOOLS = [
+        'ticket.status',
+        'queue.status',
+        'branch.load',
+        'counters.status',
+        'delay.explain',
+        'policy.read',
+        'reports.summary',
+        'notifications.summary',
+    ];
+
+    private const SUPER_ADMIN_TOOLS = [
+        'ticket.status',
+        'queue.status',
+        'branch.load',
+        'counters.status',
+        'delay.explain',
+        'policy.read',
+        'reports.summary',
+        'notifications.summary',
+        'audit.summary',
+    ];
+
     public function authorize(string $toolName, array $context): bool
     {
-        $scope = $context['scope'];
-        $role = $context['user_role'];
+        $scope = $context['scope'] ?? 'public';
+        $role = $context['user_role'] ?? 'guest';
 
-        // Public scope restrictions
         if ($scope === 'public') {
-            return $toolName === 'ticket.status';
+            return in_array($toolName, self::PUBLIC_TOOLS, true);
         }
 
-        // Operations scope (authenticated users)
-        if ($scope === 'operations') {
-            // Tellers cannot access reports
-            if ($role === 'teller' && $toolName === 'reports.summary') {
-                return false;
-            }
-
-            // Managers can use all tools except cross-branch reports
-            if ($role === 'manager' && $toolName === 'reports.summary') {
-                // Manager can only see own branch reports
-                if (!$this->canAccessBranch($context)) {
-                    return false;
-                }
-            }
-
-            // Super admin has full access
-            if ($role === 'super_admin') {
-                return true;
-            }
-
-            // Default for authenticated users: allow tool
-            return true;
+        if ($scope !== 'operations') {
+            return false;
         }
 
-        return false;
+        $allowedTools = match ($role) {
+            'super_admin' => self::SUPER_ADMIN_TOOLS,
+            'manager' => self::MANAGER_TOOLS,
+            'teller' => self::TELLER_TOOLS,
+            default => [],
+        };
+
+        if (! in_array($toolName, $allowedTools, true)) {
+            return false;
+        }
+
+        if ($role === 'manager' && $toolName === 'reports.summary') {
+            return $this->canAccessBranch($context);
+        }
+
+        return true;
     }
 
     private function canAccessBranch(array $context): bool

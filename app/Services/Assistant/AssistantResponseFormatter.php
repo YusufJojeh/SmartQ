@@ -38,14 +38,16 @@ class AssistantResponseFormatter
             $data = $result['data'] ?? [];
 
             $sections[] = match ($tool) {
-                'queue.status'    => $this->formatQueueStatus($data),
-                'ticket.status'   => $this->formatTicketStatus($data),
-                'branch.load'     => $this->formatBranchLoad($data),
-                'counters.status' => $this->formatCountersStatus($data),
-                'reports.summary' => $this->formatReportsSummary($data),
-                'delay.explain'   => $this->formatDelayExplain($data),
-                'policy.read'     => $this->formatPolicyRead($data),
-                default           => "### {$tool}\n" . json_encode($data, JSON_PRETTY_PRINT) . "\n",
+                'queue.status'          => $this->formatQueueStatus($data),
+                'ticket.status'         => $this->formatTicketStatus($data),
+                'branch.load'           => $this->formatBranchLoad($data),
+                'counters.status'       => $this->formatCountersStatus($data),
+                'reports.summary'       => $this->formatReportsSummary($data),
+                'delay.explain'         => $this->formatDelayExplain($data),
+                'policy.read'           => $this->formatPolicyRead($data),
+                'notifications.summary' => $this->formatNotificationsSummary($data),
+                'audit.summary'         => $this->formatAuditSummary($data),
+                default                 => "### {$tool}\n" . json_encode($data, JSON_PRETTY_PRINT) . "\n",
             };
         }
 
@@ -60,10 +62,12 @@ class AssistantResponseFormatter
     {
         $role      = $context['user_role'] ?? 'guest';
         $locale    = $context['locale']    ?? 'en';
-        $now       = Carbon::now()->format('D d M Y, H:i');
-        $branchCtx = $context['branch_id']
-            ? "Your branch ID is {$context['branch_id']}."
-            : 'You are not assigned to a specific branch.';
+        $now        = Carbon::now()->format('D d M Y, H:i');
+        $branchId   = $context['branch_id'] ?? null;
+        $branchName = $context['branch_name'] ?? null;
+        $branchCtx  = $branchId
+            ? ('Your branch is ' . ($branchName ? "**{$branchName}** (ID: {$branchId})" : "ID {$branchId}") . '.')
+            : 'You are not assigned to a specific branch (super admin — all branches accessible).';
 
         // ── Core identity ──────────────────────────────────────────────────
         $prompt = <<<PROMPT
@@ -92,6 +96,8 @@ You have unrestricted access to all branches, all tools, and all data.
 - You can query any branch, view cross-branch reports, and see all counters.
 - When presenting data, always specify which branch it refers to.
 - If a query spans multiple branches, summarise per-branch where possible.
+- You can view notification delivery summaries and system audit logs.
+- Audit data shown is PII-scrubbed: no IP addresses, user agents, or raw payload values.
 
 ROLE,
             'manager' => <<<ROLE
@@ -100,6 +106,7 @@ ROLE,
 You have full access to your own branch's data including reports and statistics.
 - Cross-branch data is not available to you. If asked about another branch, explain this limit.
 - You can view reports, counters, queue status, and ticket details for your branch.
+- You can view notification delivery summaries for your branch.
 - Focus insights on your branch's performance and what actions your team can take.
 
 ROLE,
@@ -115,10 +122,11 @@ ROLE,
             default => <<<ROLE
 
 ## YOUR ROLE: Public / Customer
-You can only look up ticket status using a ticket code.
+You can access only your own ticket status through public tools.
 - Never share any other customer's details.
-- Provide only: ticket status, queue position, and estimated wait.
-- If the user asks for anything else (reports, staff info, branch data), politely explain this is not available publicly.
+- If the user does not provide a ticket code or ticket number, ask them for it.
+- Do not expose staff identities, internal-only reports, or customer PII.
+- If the user asks for internal analytics or privileged data, politely explain this is not available publicly.
 
 ROLE,
         };
@@ -329,5 +337,53 @@ FORMAT;
             . "- Missed timeout: {$d['missed_timeout_minutes']} min\n"
             . "- Status: " . ($d['is_active'] ? 'Active' : 'Inactive') . "\n"
             . "- Last updated: {$d['last_updated']}\n";
+    }
+
+    private function formatNotificationsSummary(array $d): string
+    {
+        if (isset($d['error'])) {
+            return "### Notifications [ERROR]\n{$d['error']}\n";
+        }
+
+        $byType = collect($d['by_type'] ?? [])
+            ->map(fn ($cnt, $type) => "  - {$type}: {$cnt}")
+            ->implode("\n");
+
+        $byChannel = collect($d['by_channel'] ?? [])
+            ->map(fn ($cnt, $ch) => "  - {$ch}: {$cnt}")
+            ->implode("\n");
+
+        return "### Notification Summary ({$d['period']})\n"
+            . "- Total sent: **{$d['total']}**\n"
+            . "- Delivered successfully: **{$d['sent']}**\n"
+            . "- Failed: {$d['failed']}\n"
+            . "- Pending: {$d['pending']}\n"
+            . ($d['delivery_rate_pct'] !== null ? "- Delivery rate: **{$d['delivery_rate_pct']}%**\n" : "")
+            . ($byType ? "- By notification type:\n{$byType}\n" : "")
+            . ($byChannel ? "- By channel:\n{$byChannel}\n" : "")
+            . "- Fetched at: {$d['fetched_at']}\n";
+    }
+
+    private function formatAuditSummary(array $d): string
+    {
+        if (isset($d['error'])) {
+            return "### Audit Log [ERROR]\n{$d['error']}\n";
+        }
+
+        $byAction = collect($d['by_action'] ?? [])
+            ->map(fn ($cnt, $action) => "  - {$action}: {$cnt}")
+            ->implode("\n");
+
+        $recent = collect($d['recent'] ?? [])
+            ->map(fn ($e) => "  - [{$e['occurred_at']}] {$e['action']}"
+                . ($e['subject_type'] ? " on {$e['subject_type']} #{$e['subject_id']}" : ''))
+            ->implode("\n");
+
+        return "### Audit Activity (Today)\n"
+            . "- Total events today: **{$d['total_today']}**\n"
+            . ($d['filtered_by'] ? "- Filtered by action: {$d['filtered_by']}\n" : "")
+            . ($byAction ? "- Action breakdown:\n{$byAction}\n" : "")
+            . ($recent ? "- Recent entries:\n{$recent}\n" : "- No audit entries found.\n")
+            . "- Fetched at: {$d['fetched_at']}\n";
     }
 }

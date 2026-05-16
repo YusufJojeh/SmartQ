@@ -2,14 +2,17 @@
 
 namespace App\Services\Assistant;
 
+use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Counter;
+use App\Models\NotificationLog;
 use App\Models\QueuePolicy;
 use App\Models\QueueTicket;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class AssistantToolRegistry
 {
@@ -18,15 +21,37 @@ class AssistantToolRegistry
     public function execute(string $toolName, array $input, array $context): array
     {
         return match ($toolName) {
-            'queue.status'    => $this->executeQueueStatus($input, $context),
-            'branch.load'     => $this->executeBranchLoad($input, $context),
-            'ticket.status'   => $this->executeTicketStatus($input, $context),
-            'counters.status' => $this->executeCountersStatus($input, $context),
-            'reports.summary' => $this->executeReportsSummary($input, $context),
-            'delay.explain'   => $this->executeDelayExplain($input, $context),
-            'policy.read'     => $this->executePolicyRead($input, $context),
-            default           => throw new Exception("Unknown tool: {$toolName}"),
+            'queue.status'           => $this->executeQueueStatus($input, $context),
+            'branch.load'            => $this->executeBranchLoad($input, $context),
+            'ticket.status'          => $this->executeTicketStatus($input, $context),
+            'counters.status'        => $this->executeCountersStatus($input, $context),
+            'reports.summary'        => $this->executeReportsSummary($input, $context),
+            'delay.explain'          => $this->executeDelayExplain($input, $context),
+            'policy.read'            => $this->executePolicyRead($input, $context),
+            'notifications.summary'  => $this->executeNotificationsSummary($input, $context),
+            'audit.summary'          => $this->executeAuditSummary($input, $context),
+            default                  => throw new Exception("Unknown tool: {$toolName}"),
         };
+    }
+
+    /**
+     * Branch isolation guard — defense in depth.
+     *
+     * Super admin can query any branch via input.branch_id.
+     * All other roles are always forced to their auth-derived branch_id from context,
+     * regardless of whatever branch_id appeared in the tool input.
+     * This prevents a future intent-router or validator change from accidentally
+     * allowing a non-super-admin to see another branch's data.
+     */
+    private function resolvedBranchId(array $input, array $context): ?int
+    {
+        if (($context['user_role'] ?? 'guest') === 'super_admin') {
+            // Super admin: honour input.branch_id (explicit cross-branch query) or fall back to context
+            return isset($input['branch_id']) ? (int) $input['branch_id'] : ($context['branch_id'] ?? null);
+        }
+
+        // Non-super-admin: always use the auth-derived context branch — input is ignored
+        return $context['branch_id'] ?? null;
     }
 
     // ─── Tool Implementations ──────────────────────────────────────────────
@@ -36,7 +61,7 @@ class AssistantToolRegistry
      */
     private function executeQueueStatus(array $input, array $context): array
     {
-        $branchId = $input['branch_id'] ?? $context['branch_id'] ?? null;
+        $branchId = $this->resolvedBranchId($input, $context);
 
         // Use fresh query per count — never reuse a query builder after ->count()
         $base = fn () => $branchId
@@ -56,12 +81,11 @@ class AssistantToolRegistry
         $totalToday     = ($today)()->count();
 
         // Average wait today (only completed tickets with both joined_at + completed_at)
-        $avgWaitMinutes = ($today)()
-            ->where('status', 'completed')
-            ->whereNotNull('completed_at')
-            ->whereNotNull('joined_at')
-            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, joined_at, completed_at)) as avg_wait')
-            ->value('avg_wait');
+        $avgWaitMinutes = $this->averageMinutesBetween(
+            ($today)()->where('status', 'completed'),
+            'joined_at',
+            'completed_at'
+        );
 
         // Oldest waiting ticket age
         $oldestWaiting = ($base)()
@@ -95,7 +119,7 @@ class AssistantToolRegistry
      */
     private function executeBranchLoad(array $input, array $context): array
     {
-        $branchId = $input['branch_id'] ?? $context['branch_id'] ?? null;
+        $branchId = $this->resolvedBranchId($input, $context);
 
         // Super admin may omit branch → show aggregate
         if (!$branchId && $context['user_role'] !== 'super_admin') {
@@ -122,13 +146,13 @@ class AssistantToolRegistry
         $loadRatio = $activeCounters > 0 ? round($waiting / $activeCounters, 2) : null;
 
         // Average service time today
-        $avgServiceMinutes = (clone $ticketQ)
-            ->whereDate('joined_at', today())
-            ->where('status', 'completed')
-            ->whereNotNull('service_started_at')
-            ->whereNotNull('completed_at')
-            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, service_started_at, completed_at)) as avg_service')
-            ->value('avg_service');
+        $avgServiceMinutes = $this->averageMinutesBetween(
+            (clone $ticketQ)
+                ->whereDate('joined_at', today())
+                ->where('status', 'completed'),
+            'service_started_at',
+            'completed_at'
+        );
 
         // Services with their waiting counts
         $services = ServiceCategory::when($branchId, fn ($q) => $q->where('branch_id', $branchId))
@@ -230,32 +254,35 @@ class AssistantToolRegistry
      */
     private function executeCountersStatus(array $input, array $context): array
     {
-        $branchId = $input['branch_id'] ?? $context['branch_id'] ?? null;
+        $branchId = $this->resolvedBranchId($input, $context);
+        $isPublic = ($context['scope'] ?? 'public') === 'public';
 
-        $counters = Counter::with('branch')
+        $counters = Counter::with([
+            'branch:id,name',
+            'teller' => fn ($query) => $query
+                ->where('is_active', true)
+                ->select(['id', 'name', 'counter_id']),
+            'tickets' => fn ($query) => $query
+                ->where('status', 'in_service')
+                ->latest('service_started_at')
+                ->select(['id', 'counter_id', 'ticket_number', 'service_started_at', 'status']),
+        ])
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->orderBy('branch_id')
             ->orderBy('name')
             ->get();
 
-        // Map each counter to teller + current ticket being served
-        $rows = $counters->map(function (Counter $counter) {
-            // Find the teller assigned to this counter
-            $teller = User::where('counter_id', $counter->id)->where('is_active', true)->first();
-
-            // Find the ticket currently in service at this counter
-            $currentTicket = QueueTicket::where('counter_id', $counter->id)
-                ->where('status', 'in_service')
-                ->latest('service_started_at')
-                ->first();
+        $rows = $counters->map(function (Counter $counter) use ($isPublic) {
+            $teller = $counter->teller->first();
+            $currentTicket = $counter->tickets->first();
 
             return [
                 'counter'             => $counter->name,
                 'counter_code'        => $counter->code,
                 'branch'              => $counter->branch?->name,
                 'is_active'           => $counter->is_active,
-                'teller'              => $teller?->name ?? 'Unassigned',
-                'serving_ticket'      => $currentTicket?->ticket_number,
+                'teller'              => $isPublic ? 'Hidden' : ($teller?->name ?? 'Unassigned'),
+                'serving_ticket'      => $isPublic ? null : $currentTicket?->ticket_number,
                 'serving_since_min'   => $currentTicket?->service_started_at
                     ? Carbon::parse($currentTicket->service_started_at)->diffInMinutes(now())
                     : null,
@@ -280,7 +307,7 @@ class AssistantToolRegistry
      */
     private function executeReportsSummary(array $input, array $context): array
     {
-        $branchId = $input['branch_id'] ?? $context['branch_id'] ?? null;
+        $branchId = $this->resolvedBranchId($input, $context);
         $period   = $input['period'] ?? 'daily';
 
         if (!$branchId && $context['user_role'] !== 'super_admin') {
@@ -383,7 +410,7 @@ class AssistantToolRegistry
      */
     private function executeDelayExplain(array $input, array $context): array
     {
-        $branchId = $input['branch_id'] ?? $context['branch_id'] ?? null;
+        $branchId = $this->resolvedBranchId($input, $context);
 
         // Live counts
         $waiting   = QueueTicket::when($branchId, fn ($q) => $q->where('branch_id', $branchId))
@@ -397,14 +424,14 @@ class AssistantToolRegistry
             ->where('is_active', true)->count();
 
         // Average wait today
-        $avgWaitToday = QueueTicket::when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->whereDate('joined_at', today())
-            ->where('status', 'completed')
-            ->whereNotNull('joined_at')
-            ->whereNotNull('completed_at')
-            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, joined_at, completed_at)) as avg')
-            ->value('avg');
-        $avgWait = $avgWaitToday ? round((float) $avgWaitToday, 1) : 0;
+        $avgWaitToday = $this->averageMinutesBetween(
+            QueueTicket::when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+                ->whereDate('joined_at', today())
+                ->where('status', 'completed'),
+            'joined_at',
+            'completed_at'
+        );
+        $avgWait = $avgWaitToday ? round($avgWaitToday, 1) : 0;
 
         // Policy target
         $policy  = QueuePolicy::when($branchId, fn ($q) => $q->where('branch_id', $branchId))->first();
@@ -496,14 +523,13 @@ class AssistantToolRegistry
      */
     private function executePolicyRead(array $input, array $context): array
     {
-        $branchId = $input['branch_id'] ?? $context['branch_id'] ?? null;
+        $branchId = $this->resolvedBranchId($input, $context);
 
         $policy = QueuePolicy::when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->where('is_active', true)
             ->first();
 
-        if (!$policy) {
-            // Fall back to any active policy
+        if (! $policy && ($context['scope'] ?? 'public') !== 'public') {
             $policy = QueuePolicy::where('is_active', true)->first();
         }
 
@@ -522,6 +548,114 @@ class AssistantToolRegistry
             'missed_timeout_minutes'  => $policy->missed_timeout_minutes,
             'is_active'               => $policy->is_active,
             'last_updated'            => $policy->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Notification volume and channel/type breakdown for a branch.
+     * Exposed to: manager (branch-scoped), super_admin (any branch).
+     * Branch scoped via ticket.branch_id — no PII from message field is returned.
+     */
+    private function executeNotificationsSummary(array $input, array $context): array
+    {
+        $branchId = $this->resolvedBranchId($input, $context);
+        $period   = $input['period'] ?? 'daily';
+
+        [$from, $to, $label] = match ($period) {
+            'weekly' => [now()->startOfWeek(), now()->endOfDay(), 'This week'],
+            default  => [today()->startOfDay(), today()->endOfDay(), 'Today'],
+        };
+
+        $base = NotificationLog::whereBetween('sent_at', [$from, $to]);
+
+        if ($branchId) {
+            $base = $base->whereHas('ticket', fn ($q) => $q->where('branch_id', $branchId));
+        }
+
+        $total   = (clone $base)->count();
+        $sent    = (clone $base)->where('status', 'sent')->count();
+        $failed  = (clone $base)->where('status', 'failed')->count();
+        $pending = (clone $base)->where('status', 'pending')->count();
+
+        // Aggregate by type (turn_approaching, called, completed, etc.) — no PII
+        $byType = (clone $base)
+            ->select('type', DB::raw('count(*) as cnt'))
+            ->groupBy('type')
+            ->orderByDesc('cnt')
+            ->pluck('cnt', 'type')
+            ->toArray();
+
+        // Aggregate by channel (in_app, sms, email, push) — no PII
+        $byChannel = (clone $base)
+            ->select('channel', DB::raw('count(*) as cnt'))
+            ->groupBy('channel')
+            ->orderByDesc('cnt')
+            ->pluck('cnt', 'channel')
+            ->toArray();
+
+        $deliveryRate = $total > 0 ? round($sent / $total * 100, 1) : null;
+
+        return [
+            'period'           => $label,
+            'branch_id'        => $branchId,
+            'total'            => $total,
+            'sent'             => $sent,
+            'failed'           => $failed,
+            'pending'          => $pending,
+            'delivery_rate_pct' => $deliveryRate,
+            'by_type'          => $byType,
+            'by_channel'       => $byChannel,
+            'fetched_at'       => now()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Audit log summary — super_admin only.
+     * Returns aggregate counts and recent safe entries.
+     * PII-scrubbed: no ip_address, user_agent, old_values, new_values returned.
+     */
+    private function executeAuditSummary(array $input, array $context): array
+    {
+        // Defense in depth — policy guard already enforces this, but belt-and-suspenders
+        if (($context['user_role'] ?? 'guest') !== 'super_admin') {
+            return ['error' => 'Audit summary is restricted to super administrators.'];
+        }
+
+        $limit  = min((int) ($input['limit'] ?? 10), 20);
+        $action = isset($input['action']) ? (string) $input['action'] : null;
+
+        // Today's aggregate by action type
+        $todayByAction = AuditLog::whereDate('created_at', today())
+            ->when($action, fn ($q) => $q->where('action', $action))
+            ->select('action', DB::raw('count(*) as cnt'))
+            ->groupBy('action')
+            ->orderByDesc('cnt')
+            ->limit(15)
+            ->pluck('cnt', 'action')
+            ->toArray();
+
+        $totalToday = array_sum($todayByAction);
+
+        // Recent safe entries — NO ip_address, user_agent, old_values, new_values
+        $recent = AuditLog::when($action, fn ($q) => $q->where('action', $action))
+            ->latest('created_at')
+            ->limit($limit)
+            ->get(['action', 'subject_type', 'subject_id', 'user_id', 'created_at'])
+            ->map(fn ($log) => [
+                'action'       => $log->action,
+                'subject_type' => $log->subject_type ? class_basename($log->subject_type) : null,
+                'subject_id'   => $log->subject_id,
+                'user_id'      => $log->user_id,
+                'occurred_at'  => $log->created_at?->toIso8601String(),
+            ])
+            ->all();
+
+        return [
+            'total_today'   => $totalToday,
+            'by_action'     => $todayByAction,
+            'recent'        => $recent,
+            'filtered_by'   => $action,
+            'fetched_at'    => now()->toIso8601String(),
         ];
     }
 
@@ -551,5 +685,21 @@ class AssistantToolRegistry
             'missed'     => 'Missed — you did not respond when called',
             default      => ucfirst(str_replace('_', ' ', $status)),
         };
+    }
+
+    private function averageMinutesBetween(object $query, string $startColumn, string $endColumn): ?float
+    {
+        $rows = (clone $query)
+            ->whereNotNull($startColumn)
+            ->whereNotNull($endColumn)
+            ->get([$startColumn, $endColumn]);
+
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        return round((float) $rows->avg(function (QueueTicket $ticket) use ($startColumn, $endColumn) {
+            return $ticket->{$startColumn}?->diffInMinutes($ticket->{$endColumn});
+        }), 1);
     }
 }

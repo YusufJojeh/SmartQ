@@ -2,10 +2,11 @@
 
 namespace Tests\Unit\Services\Assistant;
 
+use App\Models\Branch;
 use App\Models\User;
 use App\Services\Assistant\AssistantContextBuilder;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class AssistantContextBuilderTest extends TestCase
@@ -17,84 +18,127 @@ class AssistantContextBuilderTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->seed(RolesAndPermissionsSeeder::class);
         $this->builder = app(AssistantContextBuilder::class);
     }
 
     public function test_builds_context_for_public_user(): void
     {
-        $request = Request::create('/assistant', 'GET');
+        $context = $this->builder->build([
+            'scope' => 'public',
+            'page' => ['route' => 'assistant.public'],
+        ]);
 
-        $context = $this->builder->build($request);
-
-        $this->assertEquals('public', $context['scope']);
+        $this->assertSame('public', $context['scope']);
         $this->assertNull($context['user_id']);
-        $this->assertEquals('guest', $context['user_role']);
+        $this->assertSame('guest', $context['user_role']);
+        $this->assertNull($context['branch_id']);
+        $this->assertSame(['route' => 'assistant.public'], $context['page_context']);
     }
 
     public function test_builds_context_for_authenticated_user(): void
     {
         $user = User::factory()->teller()->create();
-        $request = Request::create('/ai-assistant', 'GET');
-        $request->setUserResolver(fn () => $user);
+        $this->actingAs($user);
 
-        $context = $this->builder->build($request);
+        $context = $this->builder->build([
+            'scope' => 'operations',
+        ]);
 
-        $this->assertEquals('operations', $context['scope']);
-        $this->assertEquals($user->id, $context['user_id']);
-        $this->assertIn($context['user_role'], ['teller', 'manager', 'super_admin']);
+        $this->assertSame('operations', $context['scope']);
+        $this->assertSame($user->id, $context['user_id']);
+        $this->assertSame('teller', $context['user_role']);
     }
 
     public function test_includes_branch_id_for_user_with_branch(): void
     {
+        $branch = Branch::factory()->create();
+        $user = User::factory()->manager()->create(['branch_id' => $branch->id]);
+        $this->actingAs($user);
+
+        $context = $this->builder->build([
+            'scope' => 'operations',
+        ]);
+
+        $this->assertSame($branch->id, $context['branch_id']);
+    }
+
+    public function test_detects_locale_from_application(): void
+    {
+        app()->setLocale('ar');
+
+        $context = $this->builder->build([
+            'scope' => 'public',
+        ]);
+
+        $this->assertSame('ar', $context['locale']);
+    }
+
+    public function test_defaults_scope_from_auth_state(): void
+    {
+        $guestContext = $this->builder->build([]);
+        $this->assertSame('public', $guestContext['scope']);
+
         $user = User::factory()->manager()->create();
-        $request = Request::create('/ai-assistant', 'GET');
-        $request->setUserResolver(fn () => $user);
+        $this->actingAs($user);
 
-        $context = $this->builder->build($request);
-
-        if ($user->branch_id) {
-            $this->assertEquals($user->branch_id, $context['branch_id']);
-        }
+        $authContext = $this->builder->build([]);
+        $this->assertSame('operations', $authContext['scope']);
     }
 
-    public function test_detects_locale_from_config(): void
-    {
-        config(['app.locale' => 'ar']);
-        $request = Request::create('/assistant', 'GET');
-
-        $context = $this->builder->build($request);
-
-        $this->assertIn($context['locale'], ['en', 'ar']);
-    }
-
-    public function test_includes_current_url(): void
-    {
-        $request = Request::create('/assistant?q=test', 'GET');
-
-        $context = $this->builder->build($request);
-
-        $this->assertStringContainsString('/assistant', $context['url']);
-    }
-
-    public function test_maps_role_correctly(): void
+    public function test_maps_manager_role_correctly(): void
     {
         $manager = User::factory()->manager()->create();
-        $request = Request::create('/ai-assistant', 'GET');
-        $request->setUserResolver(fn () => $manager);
+        $this->actingAs($manager);
 
-        $context = $this->builder->build($request);
+        $context = $this->builder->build([
+            'scope' => 'operations',
+        ]);
 
-        $this->assertEquals('manager', $context['user_role']);
+        $this->assertSame('manager', $context['user_role']);
     }
 
-    public function test_super_admin_role_mapped(): void
+    public function test_maps_super_admin_role_correctly(): void
     {
         $admin = User::factory()->superAdmin()->create();
-        $request = Request::create('/ai-assistant', 'GET');
-        $request->setUserResolver(fn () => $admin);
+        $this->actingAs($admin);
 
-        $context = $this->builder->build($request);
+        $context = $this->builder->build([
+            'scope' => 'operations',
+        ]);
 
-        $this->assertEquals('super_admin', $context['user_role']);
+        $this->assertSame('super_admin', $context['user_role']);
+    }
+
+    public function test_includes_branch_name_for_user_with_branch(): void
+    {
+        $branch = Branch::factory()->create(['name' => 'Riyadh Flagship Branch']);
+        $user   = User::factory()->manager()->create(['branch_id' => $branch->id]);
+        $this->actingAs($user);
+
+        $context = $this->builder->build(['scope' => 'operations']);
+
+        $this->assertArrayHasKey('branch_name', $context);
+        $this->assertSame('Riyadh Flagship Branch', $context['branch_name']);
+    }
+
+    public function test_branch_name_is_null_for_user_without_branch(): void
+    {
+        $admin = User::factory()->superAdmin()->create(['branch_id' => null]);
+        $this->actingAs($admin);
+
+        $context = $this->builder->build(['scope' => 'operations']);
+
+        $this->assertArrayHasKey('branch_name', $context);
+        $this->assertNull($context['branch_name']);
+    }
+
+    public function test_branch_name_is_null_for_guest(): void
+    {
+        $context = $this->builder->build(['scope' => 'public']);
+
+        $this->assertArrayHasKey('branch_name', $context);
+        $this->assertNull($context['branch_name']);
     }
 }

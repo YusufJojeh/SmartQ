@@ -1,14 +1,19 @@
+import { EmptyState } from '@/components/empty-state';
+import { ConfirmDialog } from '@/components/dialogs/confirm-dialog';
+import { PaginationLinks } from '@/components/pagination-links';
+import UserDialog from '@/components/dialogs/user-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useLocale } from '@/hooks/use-locale';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type PaginatedData } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { Plus, Users } from 'lucide-react';
-import { useState } from 'react';
-import UserDialog from '@/components/dialogs/user-dialog';
-import { useLocale } from '@/hooks/use-locale';
+import { type FormEvent, useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Staff Management' }];
 
@@ -16,16 +21,29 @@ interface UserRow {
     id: number;
     name: string;
     email: string;
+    phone: string | null;
+    branch_id: number | null;
+    counter_id: number | null;
     is_active: boolean;
-    branch: { name: string } | null;
+    branch: { id: number; name: string } | null;
+    counter: { id: number; name: string; branch_id: number } | null;
     roles: { name: string }[];
+    can_update: boolean;
+    can_delete: boolean;
 }
 
 interface Props {
     users: PaginatedData<UserRow>;
-    branches?: {id: number, name: string}[];
-    counters?: {id: number, name: string, branch_id: number}[];
-    roles?: {name: string}[];
+    branches: { id: number; name: string }[];
+    counters: { id: number; name: string; branch_id: number }[];
+    roles: { name: string }[];
+    canCreate: boolean;
+    filters: {
+        search: string;
+        status: string;
+        branch_id: number | null;
+        role: string;
+    };
 }
 
 const ROLE_STYLES: Record<string, string> = {
@@ -34,31 +52,100 @@ const ROLE_STYLES: Record<string, string> = {
     teller: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
 };
 
-export default function UsersIndex({ users, branches = [], counters = [], roles = [] }: Props) {
+export default function UsersIndex({ users, branches, counters, roles, canCreate, filters }: Props) {
     const { t } = useLocale();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+    const [deleteError, setDeleteError] = useState<string>();
+    const [deleteProcessing, setDeleteProcessing] = useState(false);
+    const [search, setSearch] = useState(filters.search);
+    const [status, setStatus] = useState(filters.status || 'all');
+    const [branchId, setBranchId] = useState(filters.branch_id ? String(filters.branch_id) : 'all');
+    const [role, setRole] = useState(filters.role || 'all');
 
     const openCreate = () => {
         setSelectedUser(null);
         setDialogOpen(true);
     };
 
-    const openEdit = (u: UserRow) => {
-        setSelectedUser(u);
+    const openEdit = (user: UserRow) => {
+        setSelectedUser(user);
         setDialogOpen(true);
     };
 
-    const destroy = (id: number) => {
-        if(confirm(t('management.deleteConfirm'))) {
-            router.delete(route('users.destroy', id));
+    const applyFilters = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        router.get(route('users.index'), {
+            search,
+            status: status === 'all' ? '' : status,
+            branch_id: branchId === 'all' ? '' : branchId,
+            role: role === 'all' ? '' : role,
+        }, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const resetFilters = () => {
+        setSearch('');
+        setStatus('all');
+        setBranchId('all');
+        setRole('all');
+
+        router.get(route('users.index'), {}, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const confirmDelete = () => {
+        if (!deleteTarget) {
+            return;
         }
+
+        setDeleteProcessing(true);
+        setDeleteError(undefined);
+
+        router.delete(route('users.destroy', deleteTarget.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setDeleteTarget(null);
+                setDeleteError(undefined);
+            },
+            onError: (errors) => {
+                const firstError = Object.values(errors)[0];
+                setDeleteError(typeof firstError === 'string' ? firstError : 'Unable to delete user.');
+            },
+            onFinish: () => setDeleteProcessing(false),
+        });
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={t('management.usersTitle')} />
-            <UserDialog open={dialogOpen} onOpenChange={setDialogOpen} user={selectedUser as any} branches={branches} counters={counters} roles={roles} />
+
+            <UserDialog user={selectedUser} branches={branches} counters={counters} roles={roles} open={dialogOpen} onOpenChange={setDialogOpen} />
+            <ConfirmDialog
+                open={deleteTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setDeleteTarget(null);
+                        setDeleteError(undefined);
+                    }
+                }}
+                title="Delete user?"
+                description="This will permanently remove the account unless it still has active operational dependencies."
+                confirmLabel="Delete"
+                cancelLabel={t('common.cancel')}
+                error={deleteError}
+                processing={deleteProcessing}
+                onConfirm={confirmDelete}
+            />
+
             <div className="flex flex-col gap-6 p-6">
                 <div className="flex items-center justify-between">
                     <div>
@@ -68,9 +155,12 @@ export default function UsersIndex({ users, branches = [], counters = [], roles 
                         </h1>
                         <p className="text-sm text-muted-foreground">{t('management.usersDescription')}</p>
                     </div>
-                    <Button className="gap-2" onClick={openCreate}>
-                        <Plus className="h-4 w-4" /> {t('management.addUser')}
-                    </Button>
+                    {canCreate ? (
+                        <Button className="gap-2" onClick={openCreate}>
+                            <Plus className="h-4 w-4" />
+                            {t('management.addUser')}
+                        </Button>
+                    ) : null}
                 </div>
 
                 <Card>
@@ -78,56 +168,119 @@ export default function UsersIndex({ users, branches = [], counters = [], roles 
                         <CardTitle className="text-base">{t('management.allUsers')}</CardTitle>
                         <CardDescription>{t('management.totalUsers', { count: users.total })}</CardDescription>
                     </CardHeader>
-                    <CardContent className="p-0">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>{t('management.name')}</TableHead>
-                                    <TableHead>{t('management.email')}</TableHead>
-                                    <TableHead>{t('management.role')}</TableHead>
-                                    <TableHead>{t('common.branch')}</TableHead>
-                                    <TableHead>{t('common.status')}</TableHead>
-                                    <TableHead />
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {users.data.map((u) => {
-                                    const roleName = u.roles[0]?.name ?? 'user';
-                                    return (
-                                        <TableRow key={u.id}>
-                                            <TableCell className="font-medium">{u.name}</TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
-                                            <TableCell>
-                                                <Badge
-                                                    variant="outline"
-                                                    className={`border-0 ${ROLE_STYLES[roleName] ?? ''}`}
-                                                >
-                                                    {roleName.replace('_', ' ')}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-sm">
-                                                {u.branch?.name ?? <span className="text-muted-foreground">{t('management.allBranchesScope')}</span>}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge
-                                                    variant="outline"
-                                                    className={u.is_active
-                                                        ? 'border-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                        : 'border-0 bg-gray-100 text-gray-600'
-                                                    }
-                                                >
-                                                    {u.is_active ? t('common.active') : t('common.inactive')}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right space-x-2">
-                                                <Button variant="ghost" size="sm" onClick={() => openEdit(u)}>{t('common.edit')}</Button>
-                                                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => destroy(u.id)}>{t('common.delete')}</Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
+                    <CardContent className="space-y-4">
+                        <form className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_180px_220px_180px_auto]" onSubmit={applyFilters}>
+                            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, email, or phone" />
+                            <Select value={status} onValueChange={setStatus}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="All statuses" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All statuses</SelectItem>
+                                    <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="inactive">Inactive</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={branchId} onValueChange={setBranchId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="All branches" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All branches</SelectItem>
+                                    {branches.map((branch) => (
+                                        <SelectItem key={branch.id} value={String(branch.id)}>
+                                            {branch.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={role} onValueChange={setRole}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="All roles" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All roles</SelectItem>
+                                    {roles.map((roleOption) => (
+                                        <SelectItem key={roleOption.name} value={roleOption.name}>
+                                            {roleOption.name.replace('_', ' ')}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <div className="flex gap-2">
+                                <Button type="submit">Apply</Button>
+                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                            </div>
+                        </form>
+                        {users.data.length === 0 ? (
+                            <EmptyState
+                                icon={Users}
+                                title="No users found"
+                                description="Create staff accounts to assign managers and tellers."
+                                className="m-6"
+                            />
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>{t('management.name')}</TableHead>
+                                        <TableHead>{t('management.email')}</TableHead>
+                                        <TableHead>{t('management.role')}</TableHead>
+                                        <TableHead>{t('common.branch')}</TableHead>
+                                        <TableHead>{t('common.status')}</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {users.data.map((user) => {
+                                        const roleName = user.roles[0]?.name ?? 'user';
+
+                                        return (
+                                            <TableRow key={user.id}>
+                                                <TableCell className="font-medium">{user.name}</TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className={`border-0 ${ROLE_STYLES[roleName] ?? ''}`}>
+                                                        {roleName.replace('_', ' ')}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-sm">
+                                                    {user.branch?.name ?? <span className="text-muted-foreground">{t('management.allBranchesScope')}</span>}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={user.is_active
+                                                            ? 'border-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                            : 'border-0 bg-gray-100 text-gray-600'}
+                                                    >
+                                                        {user.is_active ? t('common.active') : t('common.inactive')}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        {user.can_update ? (
+                                                            <Button variant="ghost" size="sm" onClick={() => openEdit(user)}>
+                                                                {t('common.edit')}
+                                                            </Button>
+                                                        ) : null}
+                                                        {user.can_delete ? (
+                                                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => setDeleteTarget(user)}>
+                                                                {t('common.delete')}
+                                                            </Button>
+                                                        ) : null}
+                                                        {!user.can_update && !user.can_delete ? (
+                                                            <span className="text-sm text-muted-foreground">-</span>
+                                                        ) : null}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        )}
+                        <PaginationLinks links={users.links} />
                     </CardContent>
                 </Card>
             </div>

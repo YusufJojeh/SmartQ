@@ -2,13 +2,13 @@ import { LivePill } from '@/components/system/live-pill';
 import { MetricFrame } from '@/components/system/metric-frame';
 import { SceneShell } from '@/components/system/scene-shell';
 import { Surface } from '@/components/system/surface';
-import { type Branch } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { MotionConfig, motion } from 'framer-motion';
 import { fadeUp, staggerContainer } from '@/lib/motion';
 import { useLocale } from '@/hooks/use-locale';
+import { useBranchRealtime } from '@/hooks/use-branch-realtime';
 import { CheckCircle2, Clock3, Layers3, MonitorPlay, TimerReset, UsersRound } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface ServingTicket {
     id: number;
@@ -16,7 +16,6 @@ interface ServingTicket {
     status: string;
     service_category: { name: string; prefix: string } | null;
     counter: { name: string; code: string } | null;
-    teller: { name: string } | null;
 }
 
 interface WaitingTicket {
@@ -26,8 +25,14 @@ interface WaitingTicket {
     priority_level: number;
 }
 
+interface PublicDisplayBranch {
+    id: number;
+    name: string;
+    code: string;
+}
+
 interface Props {
-    branch: Branch;
+    branch: PublicDisplayBranch;
     nowServing: ServingTicket[];
     nextUp: WaitingTicket[];
     todayStats: { total: number; completed: number; waiting: number };
@@ -42,12 +47,25 @@ export default function PublicDisplay({ branch, nowServing, nextUp, todayStats }
         return () => clearInterval(clock);
     }, []);
 
-    useEffect(() => {
-        const sync = setInterval(() => {
+    const syncDisplay = useCallback(() => {
+        if (document.visibilityState === 'visible') {
             router.reload({ only: ['nowServing', 'nextUp', 'todayStats'] });
-        }, 8000);
-        return () => clearInterval(sync);
+        }
     }, []);
+
+    useBranchRealtime(branch.id, syncDisplay);
+
+    useEffect(() => {
+        const sync = setInterval(syncDisplay, 5000);
+        window.addEventListener('focus', syncDisplay);
+        document.addEventListener('visibilitychange', syncDisplay);
+
+        return () => {
+            clearInterval(sync);
+            window.removeEventListener('focus', syncDisplay);
+            document.removeEventListener('visibilitychange', syncDisplay);
+        };
+    }, [syncDisplay]);
 
     const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
     const dateStr = time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -57,24 +75,24 @@ export default function PublicDisplay({ branch, nowServing, nextUp, todayStats }
         <>
             <Head title={t('display.title', { branch: branch.name })} />
             <MotionConfig reducedMotion="user">
-                <SceneShell className="min-h-screen scanline" tone="dark">
+                <SceneShell className="min-h-screen" tone="display">
                     <div className="flex min-h-screen flex-col px-6 py-6 lg:px-8">
-                        <header className="mb-6 flex items-center justify-between rounded-[28px] border border-white/10 bg-white/[0.05] px-6 py-5 backdrop-blur-xl">
+                        <header className="mb-6 flex items-center justify-between rounded-2xl border border-display-muted/50 glass-ink px-6 py-5">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-[linear-gradient(180deg,#4b69ff,#2441cc)] shadow-[0_18px_44px_rgba(36,65,204,0.36)]">
-                                    <Layers3 className="h-7 w-7 text-white" />
+                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-amber shadow-glow-amber">
+                                    <Layers3 className="h-7 w-7 text-ink" />
                                 </div>
                                 <div>
-                                    <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/48">{t('display.subtitle')}</div>
-                                    <div className="mt-1 text-2xl font-semibold tracking-[-0.05em]">{branch.name}</div>
-                                    <div className="text-sm text-white/55">{t('display.description')}</div>
+                                    <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-display-fg/48">{t('display.subtitle')}</div>
+                                    <div className="font-display mt-1 text-2xl text-display-fg">{branch.name}</div>
+                                    <div className="text-sm text-display-fg/55">{t('display.description')}</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-6">
                                 <LivePill />
                                 <div className="text-right" data-testid="display-clock-zone">
-                                    <div className="text-4xl font-semibold tracking-[-0.06em] tabular-nums">{timeStr}</div>
-                                    <div className="text-sm text-white/55">{dateStr}</div>
+                                    <div className="font-display text-4xl tabular text-display-fg">{timeStr}</div>
+                                    <div className="text-sm text-display-fg/55">{dateStr}</div>
                                 </div>
                             </div>
                         </header>
@@ -103,21 +121,20 @@ export default function PublicDisplay({ branch, nowServing, nextUp, todayStats }
                                             {nowServing.map((ticket) => {
                                                 const called = ticket.status === 'called';
                                                 return (
-                                                    <div key={ticket.id} className={`relative overflow-hidden rounded-[28px] border p-6 ${called ? 'border-amber-300/36 bg-[linear-gradient(180deg,rgba(255,197,72,0.18),rgba(255,170,0,0.08))] shadow-[0_20px_60px_rgba(212,147,27,0.18)]' : 'border-white/10 bg-white/[0.06]'}`}>
-                                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_40%)]" />
+                                                    <div key={ticket.id} className={`relative overflow-hidden rounded-2xl p-6 ${called ? 'border border-display-accent/40 bg-[radial-gradient(circle_at_top,hsl(32_96%_52%_/0.22),transparent_60%)] shadow-glow-amber' : 'border border-display-muted/50 glass-ink'}`}>
                                                         <div className="relative flex h-full flex-col justify-between">
                                                             <div>
-                                                                <div className="text-[12px] uppercase tracking-[0.22em] text-white/48">{ticket.service_category?.name ?? t('display.serviceLane')}</div>
-                                                                <div className={`mt-5 text-[clamp(4rem,10vw,7rem)] font-semibold leading-none tracking-[-0.08em] tabular-nums ${called ? 'text-amber-100' : 'text-white'}`}>
+                                                                <div className="font-mono text-[12px] uppercase tracking-[0.22em] text-display-fg/48">{ticket.service_category?.name ?? t('display.serviceLane')}</div>
+                                                                <div className={`font-display mt-5 text-[clamp(4rem,10vw,7rem)] leading-none tabular ${called ? 'text-display-accent' : 'text-display-fg'}`}>
                                                                     {ticket.display_code}
                                                                 </div>
                                                             </div>
                                                             <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
                                                                 <div>
-                                                                    <div className="text-[11px] uppercase tracking-[0.2em] text-white/45">{t('common.counter')}</div>
-                                                                    <div className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-white">{ticket.counter?.name ?? t('display.assignedShortly')}</div>
+                                                                    <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-display-fg/45">{t('common.counter')}</div>
+                                                                    <div className="font-display mt-1 text-2xl text-display-fg">{ticket.counter?.name ?? t('display.assignedShortly')}</div>
                                                                 </div>
-                                                                <div className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] ${called ? 'bg-amber-200/16 text-amber-100' : 'bg-emerald-300/14 text-emerald-100'}`}>
+                                                                <div className={`rounded-full px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] ${called ? 'bg-display-accent/20 text-display-accent' : 'bg-success/20 text-success'}`}>
                                                                     {called ? t('display.proceedNow') : t('display.inService')}
                                                                 </div>
                                                             </div>
@@ -136,15 +153,15 @@ export default function PublicDisplay({ branch, nowServing, nextUp, todayStats }
                                     <div className="grid gap-4" data-testid="display-stats-zone">
                                         <MetricFrame label={t('display.totalIssued')} value={todayStats.total} detail={t('display.totalIssuedDescription')} icon={UsersRound} />
                                         <MetricFrame label={t('common.completed')} value={todayStats.completed} detail={t('display.completedDescription')} tone="green" icon={CheckCircle2} />
-                                        <MetricFrame label={t('queue.waiting')} value={todayStats.waiting} detail={t('display.waitingDescription')} tone="blue" icon={Clock3} />
+                                        <MetricFrame label={t('queue.waiting')} value={todayStats.waiting} detail={t('display.waitingDescription')} tone="default" icon={Clock3} />
                                     </div>
-                                    <div className="mt-5 rounded-[22px] border border-border/70 bg-background/70 p-4">
-                                        <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                    <div className="mt-5 rounded-2xl border border-display-muted/50 bg-display-muted/30 p-4">
+                                        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-display-fg/55">
                                             <span>{t('display.completionRate')}</span>
                                             <span data-testid="display-completion-rate">{completionRate}%</span>
                                         </div>
-                                        <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/8">
-                                            <div className="h-full rounded-full bg-[linear-gradient(90deg,#18b890,#4b69ff)] transition-[width] duration-700" style={{ width: `${completionRate}%` }} />
+                                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-display-muted">
+                                            <div className="h-full rounded-full bg-gradient-amber transition-[width] duration-700" style={{ width: `${completionRate}%` }} />
                                         </div>
                                     </div>
                                 </Surface>
@@ -159,18 +176,18 @@ export default function PublicDisplay({ branch, nowServing, nextUp, todayStats }
                                     </div>
                                     <div className="space-y-3" data-testid="display-nextup-zone">
                                         {nextUp.length === 0 ? (
-                                            <div className="rounded-[22px] border border-dashed border-border p-6 text-center text-muted-foreground">{t('display.noWaitingTickets')}</div>
+                                            <div className="rounded-2xl border border-dashed border-display-muted p-6 text-center text-display-fg/40">{t('display.noWaitingTickets')}</div>
                                         ) : (
                                             nextUp.slice(0, 8).map((ticket, index) => (
-                                                <div key={ticket.id} className={`flex items-center justify-between rounded-[22px] border px-4 py-3 ${index === 0 ? 'border-primary/24 bg-primary/10' : 'border-border/80 bg-background/70'}`}>
+                                                <div key={ticket.id} className={`flex items-center justify-between rounded-xl border px-4 py-3 ${index === 0 ? 'border-display-accent/30 bg-display-accent/10' : 'border-display-muted/50 bg-display-muted/20'}`}>
                                                     <div className="flex items-center gap-3">
-                                                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">{index + 1}</span>
+                                                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-display-muted font-mono text-sm text-display-fg/60">{index + 1}</span>
                                                         <div>
-                                                            <div className={`text-2xl font-semibold tracking-[-0.04em] tabular-nums ${index === 0 ? 'text-primary' : 'text-foreground'}`}>{ticket.display_code}</div>
-                                                            <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{ticket.service_category?.name ?? t('common.service')}</div>
+                                                            <div className={`font-display text-2xl tabular ${index === 0 ? 'text-display-accent' : 'text-display-fg'}`}>{ticket.display_code}</div>
+                                                            <div className="font-mono text-xs uppercase tracking-[0.16em] text-display-fg/45">{ticket.service_category?.name ?? t('common.service')}</div>
                                                         </div>
                                                     </div>
-                                                    {ticket.priority_level === 1 && <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">{t('display.priority')}</div>}
+                                                    {ticket.priority_level === 1 && <div className="rounded-full bg-display-accent/20 px-3 py-1 font-mono text-xs uppercase tracking-[0.18em] text-display-accent">{t('display.priority')}</div>}
                                                 </div>
                                             ))
                                         )}

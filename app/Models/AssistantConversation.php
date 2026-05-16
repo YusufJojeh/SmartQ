@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Models;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,9 +38,36 @@ class AssistantConversation extends Model
         return $this->hasMany(AssistantToolCall::class);
     }
 
+    public static function ownerKeyFor(string $scope, string $sessionId, ?int $userId): ?string
+    {
+        return match ($scope) {
+            'public' => "public:{$sessionId}",
+            'operations' => $userId ? "user:{$userId}" : null,
+            default => null,
+        };
+    }
+
     public static function findOrCreateForSession(string $sessionId, ?int $userId, string $scope): self
     {
-        $ownerKey = $scope === 'public' ? 'public' : "user:{$userId}";
+        $ownerKey = self::ownerKeyFor($scope, $sessionId, $userId);
+
+        if (! $ownerKey) {
+            abort(403, 'Invalid assistant conversation scope.');
+        }
+
+        if ($scope === 'public') {
+            $legacyConversation = self::query()
+                ->where('scope', 'public')
+                ->where('session_id', $sessionId)
+                ->where('owner_key', 'public')
+                ->first();
+
+            if ($legacyConversation) {
+                $legacyConversation->forceFill(['owner_key' => $ownerKey])->save();
+
+                return $legacyConversation;
+            }
+        }
 
         return self::firstOrCreate(
             [

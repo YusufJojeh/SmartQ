@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useLocale } from '@/hooks/use-locale';
 import {
     AlertTriangle,
@@ -83,34 +83,47 @@ interface Props {
     peakHours?: PeakHour[];
     staffingAdvisory?: StaffingAdvisory;
     dateRange?: { from: string; to: string };
+    canExport?: boolean;
 }
 
 const SERVICE_COLORS = [
-    'hsl(228 80% 54%)',
-    'hsl(142 70% 42%)',
-    'hsl(35 85% 54%)',
-    'hsl(274 62% 58%)',
-    'hsl(342 72% 52%)',
-    'hsl(188 80% 44%)',
+    'hsl(32 96% 52%)',   /* amber — primary */
+    'hsl(152 56% 36%)',  /* success green */
+    'hsl(222 47% 40%)',  /* ink-mid */
+    'hsl(267 72% 63%)',  /* purple */
+    'hsl(4 74% 49%)',    /* destructive */
+    'hsl(189 88% 40%)',  /* teal */
 ];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface ChartTooltipEntry {
+    dataKey?: string | number;
+    color?: string;
+    value?: string | number | null;
+}
+
+interface ChartTooltipProps {
+    active?: boolean;
+    payload?: ChartTooltipEntry[];
+    label?: string | number;
+}
+
+function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
     if (active && payload && payload.length) {
         return (
-            <div className="rounded-lg border bg-card px-3 py-2 text-xs shadow-lg">
-                {label && <p className="mb-1.5 font-semibold text-foreground">{label}</p>}
-                {payload.map((p: any) => (
-                    <div key={p.dataKey} className="flex items-center gap-1.5">
+            <div className="rounded-xl bg-ink px-4 py-3 text-paper shadow-elev text-xs">
+                {label && <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-paper/60">{label}</p>}
+                {payload.map((p: ChartTooltipEntry) => (
+                    <div key={String(p.dataKey)} className="flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
-                        <span className="text-muted-foreground">{p.dataKey}:</span>
-                        <span className="font-semibold text-foreground">{p.value}</span>
+                        <span className="text-paper/70">{p.dataKey}:</span>
+                        <span className="font-mono font-medium">{p.value}</span>
                     </div>
                 ))}
             </div>
         );
     }
     return null;
-};
+}
 
 // Placeholder metrics when backend hasn't provided data
 const DEFAULT_METRICS: ReportMetrics = {
@@ -129,6 +142,7 @@ export default function ReportsIndex({
     peakHours = [],
     staffingAdvisory,
     dateRange,
+    canExport = false,
 }: Props) {
     const { t } = useLocale();
     const breadcrumbs: BreadcrumbItem[] = [{ title: t('reports.title') }];
@@ -149,9 +163,9 @@ export default function ReportsIndex({
     const maxPeakTickets = Math.max(...peakHours.map((h) => h.total), 1);
 
     const advisoryColors: Record<string, string> = {
-        ok: 'text-green-700 bg-green-50 border-green-200',
-        medium: 'text-amber-700 bg-amber-50 border-amber-200',
-        high: 'text-red-700 bg-red-50 border-red-200',
+        ok: 'text-success bg-success/8 border-success/20',
+        medium: 'text-accent bg-accent-soft border-accent/30',
+        high: 'text-destructive bg-destructive/8 border-destructive/20',
     };
     const advisoryIcons: Record<string, typeof AlertTriangle> = {
         ok: CheckCircle2,
@@ -174,12 +188,16 @@ export default function ReportsIndex({
                             : t('reports.description')
                     }
                     icon={BarChart3}
-                    actions={
-                        <Button variant="outline" size="sm" className="gap-1.5">
-                            <Download className="h-3.5 w-3.5" />
-                            {t('common.exportCsv')}
-                        </Button>
-                    }
+                    actions={canExport ? (
+                        <a
+                            href={route('reports.export')}
+                            download
+                            className="inline-flex items-center gap-2 rounded-xl hairline bg-card px-4 py-2 text-sm font-medium text-ink shadow-soft hover:shadow-elev hover:-translate-y-0.5 transition"
+                        >
+                            <Download className="h-4 w-4 text-accent" />
+                            {t('common.exportXlsx')}
+                        </a>
+                    ) : undefined}
                 />
 
                 {/* KPI summary row */}

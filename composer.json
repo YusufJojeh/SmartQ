@@ -12,7 +12,9 @@
         "php": "^8.2",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "^1.10",
         "laravel/tinker": "^2.10.1",
+        "phpoffice/phpspreadsheet": "^5.7",
         "spatie/laravel-permission": "^6.25",
         "tightenco/ziggy": "^2.4"
     },
@@ -58,7 +60,17 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names='server,queue,vite'"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#86efac,#fca5a5\" -n \"server,vite,reverb,queue,schedule\" \"php artisan serve\" \"npm run dev\" \"php artisan reverb:start --debug\" \"php artisan queue:work --tries=3\" \"php artisan schedule:work\""
+        ],
+        "test": [
+            "@php artisan test"
+        ],
+        "verify": [
+            "vendor/bin/pint --test",
+            "@php artisan test",
+            "npm run format:check",
+            "npx tsc --noEmit",
+            "npm run build"
         ]
     },
     "extra": {
@@ -75,6 +87,6 @@
             "php-http/discovery": true
         }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true
 }

@@ -11,7 +11,10 @@ interface ServiceProps {
     id?: number;
     branch_id: number;
     name: string;
+    code: string;
+    description: string | null;
     prefix: string;
+    priority_level: number;
     estimated_service_minutes: number;
     is_active: boolean;
 }
@@ -32,7 +35,10 @@ export default function ServiceDialog({
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         branch_id: service?.branch_id ?? (branches[0]?.id || ''),
         name: service?.name ?? '',
+        code: service?.code ?? '',
+        description: service?.description ?? '',
         prefix: service?.prefix ?? '',
+        priority_level: service?.priority_level ?? 5,
         estimated_service_minutes: service?.estimated_service_minutes ?? 10,
         is_active: service !== null ? service.is_active : true,
     });
@@ -44,7 +50,10 @@ export default function ServiceDialog({
                 setData({
                     branch_id: service.branch_id,
                     name: service.name,
+                    code: service.code,
+                    description: service.description ?? '',
                     prefix: service.prefix,
+                    priority_level: service.priority_level,
                     estimated_service_minutes: service.estimated_service_minutes,
                     is_active: service.is_active,
                 });
@@ -53,14 +62,14 @@ export default function ServiceDialog({
                 if(branches.length) setData('branch_id', branches[0].id);
             }
         }
-    }, [open, service]);
+    }, [branches, clearErrors, open, reset, service, setData]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         if (isEdit && service?.id) {
-            put(route('services.update', service.id), { onSuccess: () => onOpenChange(false) });
+            put(route('service-categories.update', service.id), { onSuccess: () => onOpenChange(false) });
         } else {
-            post(route('services.store'), { onSuccess: () => onOpenChange(false) });
+            post(route('service-categories.store'), { onSuccess: () => onOpenChange(false) });
         }
     };
 
@@ -93,6 +102,16 @@ export default function ServiceDialog({
                             <Input id="name" value={data.name} onChange={(e) => setData('name', e.target.value)} />
                             {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
                         </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="code">{t('common.code')}</Label>
+                            <Input id="code" value={data.code} onChange={(e) => setData('code', e.target.value)} />
+                            {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="description">Description</Label>
+                            <Input id="description" value={data.description} onChange={(e) => setData('description', e.target.value)} />
+                            {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="prefix">{t('management.prefix')}</Label>
@@ -100,10 +119,15 @@ export default function ServiceDialog({
                                 {errors.prefix && <p className="text-sm text-red-500">{errors.prefix}</p>}
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="est">{t('management.estimatedWaitMins')}</Label>
-                                <Input id="est" type="number" min={1} value={data.estimated_service_minutes} onChange={(e) => setData('estimated_service_minutes', parseInt(e.target.value) || 1)} />
-                                {errors.estimated_service_minutes && <p className="text-sm text-red-500">{errors.estimated_service_minutes}</p>}
+                                <Label htmlFor="priority">Priority</Label>
+                                <Input id="priority" type="number" min={1} max={10} value={data.priority_level} onChange={(e) => setData('priority_level', parseInt(e.target.value, 10) || 1)} />
+                                {errors.priority_level && <p className="text-sm text-red-500">{errors.priority_level}</p>}
                             </div>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="est">{t('management.estimatedWaitMins')}</Label>
+                            <Input id="est" type="number" min={1} value={data.estimated_service_minutes} onChange={(e) => setData('estimated_service_minutes', parseInt(e.target.value) || 1)} />
+                            {errors.estimated_service_minutes && <p className="text-sm text-red-500">{errors.estimated_service_minutes}</p>}
                         </div>
                         <div className="flex items-center justify-between mt-2">
                             <Label htmlFor="active" className="cursor-pointer">{t('management.activeStatus')}</Label>

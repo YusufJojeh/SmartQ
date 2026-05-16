@@ -11,6 +11,7 @@ interface CounterProps {
     id?: number;
     branch_id: number;
     name: string;
+    code: string;
     is_active: boolean;
 }
 
@@ -30,6 +31,7 @@ export default function CounterDialog({
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         branch_id: counter?.branch_id ?? (branches[0]?.id || ''),
         name: counter?.name ?? '',
+        code: counter?.code ?? '',
         is_active: counter !== null ? counter.is_active : true,
     });
 
@@ -40,6 +42,7 @@ export default function CounterDialog({
                 setData({
                     branch_id: counter.branch_id,
                     name: counter.name,
+                    code: counter.code,
                     is_active: counter.is_active,
                 });
             } else {
@@ -47,7 +50,7 @@ export default function CounterDialog({
                 if(branches.length) setData('branch_id', branches[0].id);
             }
         }
-    }, [open, counter]);
+    }, [branches, clearErrors, counter, open, reset, setData]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -86,6 +89,11 @@ export default function CounterDialog({
                             <Label htmlFor="name">{t('management.counterName')}</Label>
                             <Input id="name" value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder={t('management.counterPlaceholder')} />
                             {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="code">{t('common.code')}</Label>
+                            <Input id="code" value={data.code} onChange={(e) => setData('code', e.target.value)} />
+                            {errors.code && <p className="text-sm text-red-500">{errors.code}</p>}
                         </div>
                         <div className="flex items-center justify-between mt-2">
                             <Label htmlFor="active" className="cursor-pointer">{t('management.activeStatus')}</Label>

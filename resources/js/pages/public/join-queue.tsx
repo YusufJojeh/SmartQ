@@ -50,12 +50,12 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
                         {/* Step circle */}
                         <div className="flex flex-col items-center">
                             <div
-                                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all ${
+                                className={`flex h-9 w-9 items-center justify-center rounded-full transition-all ${
                                     isComplete
-                                        ? 'bg-primary text-white'
+                                        ? 'bg-ink text-paper'
                                         : isCurrent
-                                        ? 'border-2 border-primary bg-primary/10 text-primary'
-                                        : 'border-2 border-border bg-background text-muted-foreground'
+                                        ? 'border-2 border-accent bg-accent-soft text-accent'
+                                        : 'hairline bg-paper text-muted-foreground'
                                 }`}
                             >
                                 {isComplete ? (
@@ -64,8 +64,8 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
                                     <Icon className="h-4 w-4" />
                                 )}
                             </div>
-                            <span className={`mt-1.5 text-[10px] font-semibold uppercase tracking-wide ${
-                                isCurrent ? 'text-primary' : isComplete ? 'text-foreground' : 'text-muted-foreground'
+                            <span className={`mt-1.5 font-mono text-[9px] uppercase tracking-[0.18em] ${
+                                isCurrent ? 'text-accent' : isComplete ? 'text-ink' : 'text-muted-foreground'
                             }`}>
                                 {t(step.labelKey)}
                             </span>
@@ -74,7 +74,7 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
                         {/* Connector line */}
                         {idx < STEP_CONFIG.length - 1 && (
                             <div className={`mx-2 mb-4 h-0.5 w-10 sm:w-16 rounded-full transition-colors ${
-                                idx < currentIdx ? 'bg-primary' : 'bg-border'
+                                idx < currentIdx ? 'bg-ink' : 'bg-hairline'
                             }`} />
                         )}
                     </div>

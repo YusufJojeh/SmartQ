@@ -40,6 +40,7 @@ class TellerConsoleController extends Controller
             'activeTicket'   => $activeTicket,
             'todayCompleted' => $todayCompleted,
             'counter'        => $user->counter,
+            'branchId'       => $user->branch_id,
         ]);
     }
 
@@ -65,6 +66,7 @@ class TellerConsoleController extends Controller
      */
     public function startService(QueueTicket $ticket, Request $request): JsonResponse
     {
+        $this->authorize('start', $ticket);
         $ticket = $this->queueService->startService($ticket, $request->user());
 
         return response()->json(['ticket' => $ticket]);
@@ -75,6 +77,7 @@ class TellerConsoleController extends Controller
      */
     public function complete(QueueTicket $ticket, Request $request): JsonResponse
     {
+        $this->authorize('complete', $ticket);
         $ticket = $this->queueService->completeService($ticket, $request->user());
 
         return response()->json(['ticket' => $ticket, 'message' => 'Service completed.']);
@@ -85,6 +88,7 @@ class TellerConsoleController extends Controller
      */
     public function hold(QueueTicket $ticket, Request $request): JsonResponse
     {
+        $this->authorize('hold', $ticket);
         $request->validate(['reason' => 'nullable|string|max:200']);
         $ticket = $this->queueService->holdTicket($ticket, $request->user(), $request->reason);
 
@@ -98,7 +102,7 @@ class TellerConsoleController extends Controller
     {
         $this->authorize('cancel', $ticket);
         $request->validate(['reason' => 'nullable|string|max:200']);
-        $ticket = $this->queueService->cancelTicket($ticket, $request->reason);
+        $ticket = $this->queueService->cancelTicket($ticket, $request->user(), $request->reason);
 
         return response()->json(['ticket' => $ticket]);
     }

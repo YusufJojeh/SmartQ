@@ -1,4 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
+import { FormDataConvertible } from '@inertiajs/core';
 import { LoaderCircle, LogIn, Mail, Lock } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
@@ -15,6 +16,7 @@ interface LoginForm {
     email: string;
     password: string;
     remember: boolean;
+    [key: string]: FormDataConvertible;
 }
 
 interface LoginProps {
@@ -126,13 +128,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                     {processing ? t('auth.signingIn') : t('auth.signIn')}
                 </Button>
 
-                {/* Register link */}
-                <p className="text-center text-sm text-muted-foreground">
-                    {t('auth.noAccount')}{' '}
-                    <TextLink href={route('register')} tabIndex={6}>
-                        {t('auth.createAccount')}
-                    </TextLink>
-                </p>
             </form>
         </AuthLayout>
     );

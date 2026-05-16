@@ -1,18 +1,16 @@
-import { TicketStatusBadge } from '@/components/ticket-status-badge';
-import { PriorityBadge } from '@/components/priority-badge';
-import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/empty-state';
 import { LiveIndicator } from '@/components/live-indicator';
-import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/page-header';
+import { PriorityBadge } from '@/components/priority-badge';
+import { TicketStatusBadge } from '@/components/ticket-status-badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { useBranchRealtime } from '@/hooks/use-branch-realtime';
+import { useLocale } from '@/hooks/use-locale';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Counter, type QueueTicket } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { useLocale } from '@/hooks/use-locale';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import {
     AlertCircle,
     CheckCircle2,
@@ -43,45 +41,53 @@ interface Props {
     activeTicket: QueueTicket | null;
     todayCompleted: number;
     counter: Counter | null;
+    branchId: number | null;
 }
 
-// ── Mini ticket row for the waiting list ──────────────────────────────────────
+interface TellerActionError {
+    message?: string;
+}
+
+interface TellerActionResponse {
+    ticket: QueueTicket;
+    message?: string;
+}
+
 function WaitingRow({ ticket, position }: { ticket: QueueTicket; position: number }) {
+    const { t } = useLocale();
     const joinedAt = new Date(ticket.joined_at);
     const waitMin = Math.floor((Date.now() - joinedAt.getTime()) / 60000);
     const isUrgent = waitMin >= 20;
 
     return (
         <div
-            className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors ${
                 ticket.priority_level <= 2
-                    ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20'
-                    : 'bg-card'
+                    ? 'border border-accent/30 bg-accent-soft/60'
+                    : 'hairline bg-card'
             }`}
         >
-            {/* Position number */}
             <span className="w-5 shrink-0 text-center text-xs font-semibold text-muted-foreground">{position}</span>
 
-            {/* Priority indicator */}
             {ticket.priority_level <= 2 ? (
                 <div className="h-full w-0.5 self-stretch rounded-full bg-amber-400" />
             ) : (
                 <div className="h-full w-0.5 self-stretch rounded-full bg-border" />
             )}
 
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                     <span className="font-mono text-sm font-bold">{ticket.display_code}</span>
-                    {ticket.priority_level <= 2 && (
-                        <PriorityBadge level={ticket.priority_level} showLabel={false} />
-                    )}
+                    {ticket.priority_level <= 2 && <PriorityBadge level={ticket.priority_level} showLabel={false} />}
                 </div>
-                <div className="text-[11px] text-muted-foreground truncate">
-                    {ticket.service_category?.name ?? 'Service'}
-                </div>
+                <div className="truncate text-[11px] text-muted-foreground">{ticket.service_category?.name ?? t('teller.unknownService')}</div>
             </div>
 
-            <div className={`flex items-center gap-1 text-xs shrink-0 ${isUrgent ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-muted-foreground'}`}>
+            <div
+                className={`flex shrink-0 items-center gap-1 text-xs ${
+                    isUrgent ? 'font-semibold text-red-600 dark:text-red-400' : 'text-muted-foreground'
+                }`}
+            >
                 <Clock className="h-3 w-3" />
                 {waitMin}m
             </div>
@@ -89,7 +95,7 @@ function WaitingRow({ ticket, position }: { ticket: QueueTicket; position: numbe
     );
 }
 
-export default function TellerConsole({ snapshot, activeTicket: initialActive, todayCompleted, counter }: Props) {
+export default function TellerConsole({ snapshot, activeTicket: initialActive, todayCompleted, counter, branchId }: Props) {
     const { t } = useLocale();
     const [activeTicket, setActiveTicket] = useState<QueueTicket | null>(initialActive);
     const [loading, setLoading] = useState<string | null>(null);
@@ -99,13 +105,16 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
     const [errorTimer, setErrorTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
     const isIdle = !activeTicket;
+    const isCalled = activeTicket?.status === 'called';
+    const isInService = activeTicket?.status === 'in_service';
+    const isOnHold = activeTicket?.status === 'on_hold';
 
-    // Auto-dismiss error after 5s
     useEffect(() => {
         if (error) {
-            const t = setTimeout(() => setError(null), 5000);
-            setErrorTimer(t);
-            return () => clearTimeout(t);
+            const timer = setTimeout(() => setError(null), 5000);
+            setErrorTimer(timer);
+
+            return () => clearTimeout(timer);
         }
     }, [error]);
 
@@ -115,80 +124,172 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
     }
 
     function dismissError() {
-        if (errorTimer) clearTimeout(errorTimer);
+        if (errorTimer) {
+            clearTimeout(errorTimer);
+        }
+
         setError(null);
     }
 
-    async function callNext() {
+    const getErrorMessage = (errorValue: unknown, fallback: string) =>
+        errorValue instanceof AxiosError
+            ? (errorValue.response?.data as TellerActionError | undefined)?.message ?? fallback
+            : fallback;
+
+    const callNext = useCallback(async () => {
         setLoadingFor('call');
+
         try {
-            const { data } = await axios.post(route('teller.call-next'));
+            const { data } = await axios.post<TellerActionResponse>(route('teller.call-next'));
             setActiveTicket(data.ticket);
-            setWaitingList((prev) => prev.filter((t) => t.id !== data.ticket.id));
-        } catch (e: any) {
-            setError(e.response?.data?.message ?? 'No tickets waiting in queue.');
+            setWaitingList((prev) => prev.filter((ticket) => ticket.id !== data.ticket.id));
+        } catch (errorValue: unknown) {
+            setError(getErrorMessage(errorValue, 'No tickets waiting in queue.'));
         } finally {
             setLoading(null);
         }
-    }
+    }, []);
 
-    async function completeTicket() {
+    const startTicket = useCallback(async () => {
         if (!activeTicket) return;
+
+        setLoadingFor('start');
+
+        try {
+            const { data } = await axios.post<TellerActionResponse>(route('teller.start', { ticket: activeTicket.id }));
+            setActiveTicket(data.ticket);
+        } catch (errorValue: unknown) {
+            setError(getErrorMessage(errorValue, 'Failed to start ticket service.'));
+        } finally {
+            setLoading(null);
+        }
+    }, [activeTicket]);
+
+    const completeTicket = useCallback(async () => {
+        if (!activeTicket) return;
+
         setLoadingFor('complete');
+
         try {
             await axios.post(route('teller.complete', { ticket: activeTicket.id }));
             setActiveTicket(null);
-            setCompletedToday((c) => c + 1);
-        } catch (e: any) {
-            setError(e.response?.data?.message ?? 'Failed to complete ticket.');
+            setCompletedToday((count) => count + 1);
+        } catch (errorValue: unknown) {
+            setError(getErrorMessage(errorValue, 'Failed to complete ticket.'));
         } finally {
             setLoading(null);
         }
-    }
+    }, [activeTicket]);
 
-    async function holdTicket() {
+    const holdTicket = useCallback(async () => {
         if (!activeTicket) return;
+
         setLoadingFor('hold');
+
         try {
-            await axios.post(route('teller.hold', { ticket: activeTicket.id }));
-            setActiveTicket(null);
-        } catch (e: any) {
-            setError(e.response?.data?.message ?? 'Failed to hold ticket.');
+            const { data } = await axios.post<TellerActionResponse>(route('teller.hold', { ticket: activeTicket.id }));
+            setActiveTicket(data.ticket);
+        } catch (errorValue: unknown) {
+            setError(getErrorMessage(errorValue, 'Failed to hold ticket.'));
         } finally {
             setLoading(null);
         }
-    }
+    }, [activeTicket]);
+
+    const cancelTicket = useCallback(async () => {
+        if (!activeTicket) return;
+
+        setLoadingFor('cancel');
+
+        try {
+            await axios.post(route('teller.cancel', { ticket: activeTicket.id }));
+            setActiveTicket(null);
+        } catch (errorValue: unknown) {
+            setError(getErrorMessage(errorValue, 'Failed to cancel ticket.'));
+        } finally {
+            setLoading(null);
+        }
+    }, [activeTicket]);
 
     function refreshPage() {
         router.reload({ only: ['snapshot', 'activeTicket', 'todayCompleted'] });
     }
 
-    // Keyboard shortcut: Space = call next (when idle)
+    const syncConsole = useCallback(() => {
+        if (document.visibilityState !== 'visible' || loading !== null) {
+            return;
+        }
+
+        router.reload({
+            only: ['snapshot', 'activeTicket', 'todayCompleted'],
+            onSuccess: (page) => {
+                const props = page.props as unknown as Props;
+                setWaitingList(props.snapshot.waiting);
+                setActiveTicket(props.activeTicket);
+                setCompletedToday(props.todayCompleted);
+            },
+        });
+    }, [loading]);
+
+    useBranchRealtime(branchId, syncConsole);
+
     useEffect(() => {
-        function handler(e: KeyboardEvent) {
-            if ((e.target as HTMLElement).tagName === 'INPUT') return;
-            if (e.code === 'Space' && isIdle && loading === null) {
-                e.preventDefault();
+        const sync = setInterval(syncConsole, 7000);
+        window.addEventListener('focus', syncConsole);
+
+        return () => {
+            clearInterval(sync);
+            window.removeEventListener('focus', syncConsole);
+        };
+    }, [syncConsole]);
+
+    useEffect(() => {
+        function handler(event: KeyboardEvent) {
+            if ((event.target as HTMLElement).tagName === 'INPUT') return;
+
+            if (event.code === 'Space' && isIdle && loading === null) {
+                event.preventDefault();
                 callNext();
             }
         }
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, [isIdle, loading]);
 
-    const serviceMinutes = activeTicket
-        ? Math.floor((Date.now() - new Date(activeTicket.called_at ?? activeTicket.joined_at).getTime()) / 60000)
+        window.addEventListener('keydown', handler);
+
+        return () => window.removeEventListener('keydown', handler);
+    }, [callNext, isIdle, loading]);
+
+    const calledMinutes = activeTicket?.called_at
+        ? Math.floor((Date.now() - new Date(activeTicket.called_at).getTime()) / 60000)
         : 0;
+
+    const serviceMinutes = activeTicket?.service_started_at
+        ? Math.floor((Date.now() - new Date(activeTicket.service_started_at).getTime()) / 60000)
+        : 0;
+
+    const activeDescription = activeTicket
+        ? isCalled
+            ? t('teller.calledDescription')
+            : isOnHold
+                ? t('teller.heldDescription')
+                : t('teller.activeDescription')
+        : t('teller.noActiveCustomer');
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={t('teller.title')} />
-            <div className="flex flex-col gap-5 p-4 sm:p-6 page-enter">
 
-                {/* Page header */}
+            <div className="page-enter flex flex-col gap-5 p-4 sm:p-6">
                 <PageHeader
                     title={t('teller.title')}
-                    description={counter ? <span data-testid="teller-header-stats">{counter.name} · {completedToday} tickets completed today</span> : <span data-testid="teller-header-stats">{completedToday} tickets completed today</span>}
+                    description={
+                        counter ? (
+                            <span data-testid="teller-header-stats">
+                                {counter.name} · {t('teller.completedToday', { count: completedToday })}
+                            </span>
+                        ) : (
+                            <span data-testid="teller-header-stats">{t('teller.completedToday', { count: completedToday })}</span>
+                        )
+                    }
                     icon={Cpu}
                     actions={
                         <Button variant="outline" size="sm" className="gap-1.5" onClick={refreshPage}>
@@ -198,13 +299,12 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
                     }
                 />
 
-                {/* Error banner */}
                 {error && (
                     <div className="slide-down flex items-center gap-2.5 rounded-lg border border-destructive/25 bg-destructive/8 px-4 py-3 text-sm text-destructive">
                         <AlertCircle className="h-4 w-4 shrink-0" />
                         <span className="flex-1">{error}</span>
                         <button
-                            className="ml-1 rounded p-0.5 hover:bg-destructive/10 transition-colors"
+                            className="ml-1 rounded p-0.5 transition-colors hover:bg-destructive/10"
                             onClick={dismissError}
                             aria-label="Dismiss error"
                         >
@@ -214,130 +314,164 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
                 )}
 
                 <div className="grid gap-5 lg:grid-cols-3 xl:grid-cols-[1fr_1fr_320px]">
+                    <div className="space-y-4 lg:col-span-2">
+                        <div className={`rounded-2xl overflow-hidden transition-all ${activeTicket ? 'hairline shadow-elev' : 'hairline shadow-soft'}`}>
+                            <div className={`h-1 w-full ${activeTicket ? 'bg-accent' : 'bg-hairline'}`} />
 
-                    {/* ── Left: Active Ticket + Controls ───────────────────── */}
-                    <div className="lg:col-span-2 space-y-4">
+                            <div className="p-5">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <PhoneCall className={`h-4 w-4 ${activeTicket ? 'text-accent' : 'text-muted-foreground'}`} />
+                                    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t('teller.activeTicket')}</div>
+                                    {activeTicket && <LiveIndicator size="sm" label="" className="ml-auto" />}
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-4">{activeDescription}</p>
 
-                        {/* Active Ticket Card */}
-                        <Card className={`overflow-hidden transition-all ${activeTicket ? 'ring-1 ring-primary/30 shadow-md shadow-primary/5' : ''}`}>
-                            {/* Card accent bar */}
-                            <div className={`h-1 w-full ${activeTicket ? 'bg-primary' : 'bg-border'}`} />
-
-                            <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                                    <PhoneCall className={`h-4 w-4 ${activeTicket ? 'text-primary' : 'text-muted-foreground'}`} />
-                                    {t('teller.activeTicket')}
-                                    {activeTicket && <LiveIndicator size="sm" label="" className="ml-1" />}
-                                </CardTitle>
-                                <CardDescription className="text-xs">
-                                    {activeTicket ? 'Customer currently at your counter' : 'No active customer — call the next in queue'}
-                                </CardDescription>
-                            </CardHeader>
-
-                            <CardContent>
                                 {activeTicket ? (
                                     <div className="space-y-5">
-                                        {/* Big ticket display */}
-                                        <div className="relative overflow-hidden rounded-xl bg-primary px-6 py-7 text-center text-white shadow-lg shadow-primary/20">
-                                            {/* Background glow */}
-                                            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.1)_0%,transparent_60%)]" />
+                                        <div className="relative overflow-hidden rounded-2xl bg-ink px-6 py-7 text-center text-paper shadow-elev">
+                                            <div className="pointer-events-none absolute inset-0 grid-display opacity-20" />
+                                            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(32_96%_52%_/0.18),transparent_60%)]" />
 
-                                            <div className="text-[11px] font-semibold uppercase tracking-widest text-white/60 mb-2">
-                                                {t('teller.nowServing')}
-                                            </div>
-                                            <div className="text-7xl font-black tabular-nums tracking-tight leading-none" data-testid="active-ticket-code">
-                                                {activeTicket.display_code}
-                                            </div>
-                                            <div className="mt-3 text-sm text-white/75">
-                                                {activeTicket.service_category?.name}
-                                            </div>
-                                            {activeTicket.customer_name && (
-                                                <div className="mt-1 text-sm font-semibold text-white/90">
-                                                    {activeTicket.customer_name}
+                                            <div className="relative">
+                                                <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-paper/55">
+                                                    {t('teller.nowServing')}
                                                 </div>
-                                            )}
-
-                                            {/* Badges row */}
-                                            <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
-                                                <TicketStatusBadge
-                                                    status={activeTicket.status as any}
-                                                    className="bg-white/20 text-white ring-white/20"
-                                                    showDot={false}
-                                                />
-                                                {activeTicket.priority_level <= 2 && (
-                                                    <PriorityBadge
-                                                        level={activeTicket.priority_level}
-                                                        className="bg-white/20 text-white ring-white/20"
-                                                    />
+                                                <div className="font-display text-8xl leading-none tabular text-paper" data-testid="active-ticket-code">
+                                                    {activeTicket.display_code}
+                                                </div>
+                                                <div className="mt-3 text-sm text-paper/70">{activeTicket.service_category?.name}</div>
+                                                {activeTicket.customer_name && (
+                                                    <div className="mt-1 text-sm font-medium text-paper/90">{activeTicket.customer_name}</div>
                                                 )}
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-xs text-white/80 ring-1 ring-white/20" data-testid="service-timer">
-                                                    <Clock className="h-3 w-3" />
-                                                    {serviceMinutes}m in service
-                                                </span>
+
+                                                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                                                    <TicketStatusBadge
+                                                        status={activeTicket.status}
+                                                        className="bg-paper/15 text-paper ring-paper/20"
+                                                        showDot={false}
+                                                    />
+                                                    {activeTicket.priority_level <= 2 && (
+                                                        <PriorityBadge
+                                                            level={activeTicket.priority_level}
+                                                            className="bg-accent/20 text-accent ring-accent/20"
+                                                        />
+                                                    )}
+                                                    {isCalled && (
+                                                        <span
+                                                            className="inline-flex items-center gap-1 rounded-full bg-paper/15 px-2 py-0.5 text-xs text-paper/80 ring-1 ring-paper/20"
+                                                            data-testid="called-timer"
+                                                        >
+                                                            <Clock className="h-3 w-3" />
+                                                            {calledMinutes}m since call
+                                                        </span>
+                                                    )}
+                                                    {(isInService || isOnHold) && (
+                                                        <span
+                                                            className="inline-flex items-center gap-1 rounded-full bg-paper/15 px-2 py-0.5 text-xs text-paper/80 ring-1 ring-paper/20"
+                                                            data-testid="service-timer"
+                                                        >
+                                                            <Clock className="h-3 w-3" />
+                                                            {serviceMinutes}m in service
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Action buttons */}
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <Button
-                                                size="lg"
-                                                className="gap-2 text-base font-semibold"
-                                                onClick={completeTicket}
-                                                disabled={loading !== null}
-                                            >
-                                                {loading === 'complete' ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <CheckCircle2 className="h-4 w-4" />
-                                                )}
-                                                {t('teller.complete')}
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="lg"
-                                                className="gap-2 text-base"
-                                                onClick={holdTicket}
-                                                disabled={loading !== null}
-                                            >
-                                                {loading === 'hold' ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <PauseCircle className="h-4 w-4" />
-                                                )}
-                                                {t('teller.hold')}
-                                            </Button>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            {(isCalled || isOnHold) && (
+                                                <Button
+                                                    size="lg"
+                                                    className="gap-2 text-base font-semibold"
+                                                    onClick={startTicket}
+                                                    disabled={loading !== null}
+                                                >
+                                                    {loading === 'start' ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <PhoneCall className="h-4 w-4" />
+                                                    )}
+                                                    {isCalled ? t('teller.start') : t('teller.resume')}
+                                                </Button>
+                                            )}
+
+                                            {(isInService || isOnHold) && (
+                                                <Button
+                                                    size="lg"
+                                                    className="gap-2 text-base font-semibold"
+                                                    onClick={completeTicket}
+                                                    disabled={loading !== null}
+                                                >
+                                                    {loading === 'complete' ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <CheckCircle2 className="h-4 w-4" />
+                                                    )}
+                                                    {t('teller.complete')}
+                                                </Button>
+                                            )}
+
+                                            {isInService && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="lg"
+                                                    className="gap-2 text-base"
+                                                    onClick={holdTicket}
+                                                    disabled={loading !== null}
+                                                >
+                                                    {loading === 'hold' ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <PauseCircle className="h-4 w-4" />
+                                                    )}
+                                                    {t('teller.hold')}
+                                                </Button>
+                                            )}
+
+                                            {(isCalled || isInService || isOnHold) && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="lg"
+                                                    className="gap-2 text-base"
+                                                    onClick={cancelTicket}
+                                                    disabled={loading !== null}
+                                                >
+                                                    {loading === 'cancel' ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <X className="h-4 w-4" />
+                                                    )}
+                                                    {t('common.cancel')}
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 ) : (
-                                    /* Idle state */
                                     <div className="flex flex-col items-center py-10 text-center">
                                         <div className="relative mb-5">
-                                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-paper-soft hairline">
                                                 <Inbox className="h-8 w-8 text-muted-foreground/50" />
                                             </div>
                                             {waitingList.length > 0 && (
-                                                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                                                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-ink">
                                                     {waitingList.length}
                                                 </span>
                                             )}
                                         </div>
-                                        <p className="font-semibold text-foreground">Idle — No Active Customer</p>
+                                        <p className="font-display text-xl text-ink">{t('teller.idleTitle')}</p>
                                         <p className="mt-1 text-sm text-muted-foreground">
                                             {waitingList.length > 0
-                                                ? `${waitingList.length} customer${waitingList.length !== 1 ? 's' : ''} waiting in queue`
-                                                : 'Queue is currently empty'}
+                                                ? t(waitingList.length === 1 ? 'teller.idleWaiting' : 'teller.idleWaitingPlural', { count: waitingList.length })
+                                                : t('teller.idleEmpty')}
                                         </p>
                                         <p className="mt-3 text-xs text-muted-foreground/60">
-                                            Press{' '}
-                                            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px]">Space</kbd>{' '}
-                                            or the button below to call next
+                                            {t('teller.idleHint')}
                                         </p>
                                     </div>
                                 )}
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </div>
 
-                        {/* Call Next button */}
                         <Button
                             className="w-full gap-2 text-base font-semibold"
                             size="lg"
@@ -353,57 +487,56 @@ export default function TellerConsole({ snapshot, activeTicket: initialActive, t
                             {isIdle ? t('teller.callNext') : t('teller.finishFirst')}
                         </Button>
 
-                        {/* Stats row */}
                         <div className="grid grid-cols-3 gap-3">
                             {[
-                                { label: 'Waiting', value: waitingList.length, accent: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/30' },
-                                { label: 'Serving', value: (activeTicket ? 1 : 0), accent: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/30' },
-                                { label: 'Done Today', value: completedToday, accent: 'text-muted-foreground', bg: 'bg-muted/40' },
-                            ].map((s) => (
-                                <div key={s.label} className={`rounded-xl border px-3 py-3 text-center ${s.bg}`}>
-                                    <div className={`text-2xl font-bold tabular-nums ${s.accent}`} data-testid={`stat-value-${s.label.toLowerCase().replace(' ', '-')}`}>{s.value}</div>
-                                    <div className="mt-0.5 text-xs text-muted-foreground">{s.label}</div>
+                                { label: 'Waiting', value: waitingList.length, accent: 'text-accent', bg: 'bg-accent-soft' },
+                                { label: 'Serving', value: activeTicket ? 1 : 0, accent: 'text-success', bg: 'bg-success/10' },
+                                { label: 'Done Today', value: completedToday, accent: 'text-ink', bg: 'bg-paper-soft' },
+                            ].map((stat) => (
+                                <div key={stat.label} className={`rounded-xl hairline px-3 py-3 text-center ${stat.bg}`}>
+                                    <div
+                                        className={`font-display text-3xl tabular ${stat.accent}`}
+                                        data-testid={`stat-value-${stat.label.toLowerCase().replace(' ', '-')}`}
+                                    >
+                                        {stat.value}
+                                    </div>
+                                    <div className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{stat.label}</div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* ── Right: Waiting Queue ──────────────────────────────── */}
-                    <Card className="h-fit lg:sticky lg:top-6" data-testid="waiting-queue-card">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center justify-between text-sm font-semibold">
+                    <div className="h-fit lg:sticky lg:top-6 rounded-2xl hairline bg-card shadow-soft overflow-hidden" data-testid="waiting-queue-card">
+                        <div className="p-5 hairline-b">
+                            <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Users className="h-4 w-4 text-muted-foreground" />
-                                    {t('teller.queue')}
+                                    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t('teller.queue')}</div>
                                 </div>
-                                <Badge variant="secondary" className="tabular-nums">
+                                <div className="rounded-full bg-accent-soft px-2.5 py-0.5 font-mono text-[10px] tabular text-accent">
                                     {waitingList.length}
-                                </Badge>
-                            </CardTitle>
-                            <CardDescription className="text-xs">Waiting for their turn</CardDescription>
-                        </CardHeader>
-
-                        <Separator />
-
-                        <CardContent className="p-0">
-                            <ScrollArea className="h-[440px]">
-                                <div className="space-y-1.5 p-3">
-                                    {waitingList.length === 0 ? (
-                                        <EmptyState
-                                            icon={Inbox}
-                                            title="Queue is empty"
-                                            description="No customers waiting at this moment."
-                                            size="sm"
-                                        />
-                                    ) : (
-                                        waitingList.map((t, idx) => (
-                                            <WaitingRow key={t.id} ticket={t} position={idx + 1} />
-                                        ))
-                                    )}
                                 </div>
-                            </ScrollArea>
-                        </CardContent>
-                    </Card>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">Waiting for their turn</p>
+                        </div>
+
+                        <ScrollArea className="h-[440px]">
+                            <div className="space-y-1.5 p-3">
+                                {waitingList.length === 0 ? (
+                                    <EmptyState
+                                        icon={Inbox}
+                                        title="Queue is empty"
+                                        description="No customers waiting at this moment."
+                                        size="sm"
+                                    />
+                                ) : (
+                                    waitingList.map((ticket, index) => (
+                                        <WaitingRow key={ticket.id} ticket={ticket} position={index + 1} />
+                                    ))
+                                )}
+                            </div>
+                        </ScrollArea>
+                    </div>
                 </div>
             </div>
         </AppLayout>

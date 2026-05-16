@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Queue;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class IssueTicketRequest extends FormRequest
 {
@@ -15,7 +16,13 @@ class IssueTicketRequest extends FormRequest
     {
         return [
             'branch_id'           => ['required', 'integer', 'exists:branches,id'],
-            'service_category_id' => ['required', 'integer', 'exists:service_categories,id'],
+            'service_category_id' => [
+                'required',
+                'integer',
+                Rule::exists('service_categories', 'id')->where(function ($query) {
+                    $query->where('branch_id', $this->integer('branch_id'));
+                }),
+            ],
             'customer_name'       => ['nullable', 'string', 'max:150'],
             'customer_phone'      => ['nullable', 'string', 'max:20', 'regex:/^[+0-9\s\-()]+$/'],
         ];
@@ -26,6 +33,7 @@ class IssueTicketRequest extends FormRequest
         return [
             'branch_id.required'           => 'Please select a branch.',
             'service_category_id.required' => 'Please select a service.',
+            'service_category_id.exists'   => 'Please select a service from the chosen branch.',
         ];
     }
 }

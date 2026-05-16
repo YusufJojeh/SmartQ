@@ -50,12 +50,69 @@ export function buildAssistantContext(
         url: window.location.pathname,
         route: component,
         locale,
-        page: redactValue(pageProps) as Record<string, unknown>,
+        page: buildMinimalPageContext(pageProps, component, scope),
         session_id: getSessionId(),
         ...overrides,
     };
 
     return context;
+}
+
+function buildMinimalPageContext(
+    pageProps: SharedData,
+    component: string,
+    scope: 'public' | 'operations',
+): Record<string, unknown> {
+    const context: Record<string, unknown> = {
+        component,
+        route: component,
+        scope,
+    };
+
+    const branch = asRecord(pageProps.branch);
+    if (branch) {
+        context.branch = redactValue({
+            id: branch.id,
+            name: branch.name,
+            code: branch.code,
+        });
+    }
+
+    const ticket = asRecord(pageProps.ticket);
+    if (ticket) {
+        context.ticket = redactValue({
+            id: ticket.id,
+            display_code: ticket.display_code,
+            status: ticket.status,
+            position: toNullableNumber(pageProps.position),
+            waiting_count: toNullableNumber(pageProps.waitingCount),
+            counter_name: asRecord(ticket.counter)?.name,
+            service_name: asRecord(ticket.service_category)?.name,
+        });
+    }
+
+    const filters = asRecord(pageProps.filters);
+    if (filters) {
+        context.filters = redactValue(
+            Object.fromEntries(
+                Object.entries(filters).filter(([, value]) =>
+                    ['string', 'number', 'boolean'].includes(typeof value) || value === null,
+                ),
+            ),
+        );
+    }
+
+    return context;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : null;
+}
+
+function toNullableNumber(value: unknown): number | null {
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function getSessionId(): string {

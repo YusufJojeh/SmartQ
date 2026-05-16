@@ -20,14 +20,16 @@ class AssistantToolInputValidator
     public function validate(string $toolName, array $input): array
     {
         return match ($toolName) {
-            'queue.status'    => $this->validateQueueStatus($input),
-            'ticket.status'   => $this->validateTicketStatus($input),
-            'branch.load'     => $this->validateBranchLoad($input),
-            'counters.status' => $this->validateCountersStatus($input),
-            'reports.summary' => $this->validateReportsSummary($input),
-            'delay.explain'   => $this->validateDelayExplain($input),
-            'policy.read'     => $this->validatePolicyRead($input),
-            default           => throw new Exception("Unknown tool: {$toolName}"),
+            'queue.status'           => $this->validateQueueStatus($input),
+            'ticket.status'          => $this->validateTicketStatus($input),
+            'branch.load'            => $this->validateBranchLoad($input),
+            'counters.status'        => $this->validateCountersStatus($input),
+            'reports.summary'        => $this->validateReportsSummary($input),
+            'delay.explain'          => $this->validateDelayExplain($input),
+            'policy.read'            => $this->validatePolicyRead($input),
+            'notifications.summary'  => $this->validateNotificationsSummary($input),
+            'audit.summary'          => $this->validateAuditSummary($input),
+            default                  => throw new Exception("Unknown tool: {$toolName}"),
         };
     }
 
@@ -127,6 +129,47 @@ class AssistantToolInputValidator
         if (isset($input['branch_id'])) {
             $out['branch_id'] = $this->positiveInt($input['branch_id'], 'branch_id');
         }
+        return $out;
+    }
+
+    private function validateNotificationsSummary(array $input): array
+    {
+        $out = [];
+
+        if (isset($input['branch_id'])) {
+            $out['branch_id'] = $this->positiveInt($input['branch_id'], 'branch_id');
+        }
+
+        $period = $input['period'] ?? 'daily';
+        if (!in_array($period, self::VALID_PERIODS, true)) {
+            throw new Exception('period must be one of: ' . implode(', ', self::VALID_PERIODS));
+        }
+        $out['period'] = $period;
+
+        return $out;
+    }
+
+    private function validateAuditSummary(array $input): array
+    {
+        $out = [];
+
+        if (isset($input['limit'])) {
+            $limit = (int) $input['limit'];
+            if ($limit < 1 || $limit > 20) {
+                throw new Exception('limit must be between 1 and 20');
+            }
+            $out['limit'] = $limit;
+        }
+
+        if (isset($input['action'])) {
+            $action = trim((string) $input['action']);
+            // Only allow alphanumeric, dots, underscores — matches typical action names like "ticket.created"
+            if (!preg_match('/^[\w.\-]{1,100}$/', $action)) {
+                throw new Exception("Invalid action filter format: {$action}");
+            }
+            $out['action'] = $action;
+        }
+
         return $out;
     }
 

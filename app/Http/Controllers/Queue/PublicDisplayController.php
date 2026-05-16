@@ -18,7 +18,7 @@ class PublicDisplayController extends Controller
         $nowServing = QueueTicket::query()
             ->forBranch($branch->id)
             ->whereIn('status', ['called', 'in_service'])
-            ->with(['serviceCategory', 'counter', 'teller'])
+            ->with(['serviceCategory', 'counter'])
             ->orderBy('called_at', 'desc')
             ->get();
 
@@ -38,9 +38,33 @@ class PublicDisplayController extends Controller
         ];
 
         return Inertia::render('public/display', [
-            'branch'     => $branch,
-            'nowServing' => $nowServing,
-            'nextUp'     => $nextUp,
+            'branch'     => [
+                'id' => $branch->id,
+                'name' => $branch->name,
+                'code' => $branch->code,
+            ],
+            'nowServing' => $nowServing->map(fn (QueueTicket $ticket) => [
+                'id' => $ticket->id,
+                'display_code' => $ticket->display_code,
+                'status' => $ticket->status,
+                'service_category' => $ticket->serviceCategory ? [
+                    'name' => $ticket->serviceCategory->name,
+                    'prefix' => $ticket->serviceCategory->prefix,
+                ] : null,
+                'counter' => $ticket->counter ? [
+                    'name' => $ticket->counter->name,
+                    'code' => $ticket->counter->code,
+                ] : null,
+            ])->values()->all(),
+            'nextUp'     => $nextUp->map(fn (QueueTicket $ticket) => [
+                'id' => $ticket->id,
+                'display_code' => $ticket->display_code,
+                'service_category' => $ticket->serviceCategory ? [
+                    'name' => $ticket->serviceCategory->name,
+                    'prefix' => $ticket->serviceCategory->prefix,
+                ] : null,
+                'priority_level' => $ticket->priority_level,
+            ])->values()->all(),
             'todayStats' => $todayStats,
         ]);
     }

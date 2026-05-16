@@ -2,17 +2,18 @@
 
 namespace Tests\Unit\Services\Assistant;
 
-use App\Services\Assistant\AssistantInputValidator;
+use App\Services\Assistant\AssistantToolInputValidator;
+use Exception;
 use Tests\TestCase;
 
 class AssistantInputValidatorTest extends TestCase
 {
-    private AssistantInputValidator $validator;
+    private AssistantToolInputValidator $validator;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->validator = app(AssistantInputValidator::class);
+        $this->validator = app(AssistantToolInputValidator::class);
     }
 
     public function test_validates_branch_load_input(): void
@@ -21,7 +22,7 @@ class AssistantInputValidatorTest extends TestCase
             'branch_id' => '123',
         ]);
 
-        $this->assertEquals(123, $validated['branch_id']);
+        $this->assertSame(123, $validated['branch_id']);
         $this->assertIsInt($validated['branch_id']);
     }
 
@@ -31,22 +32,30 @@ class AssistantInputValidatorTest extends TestCase
             'branch_id' => '456',
         ]);
 
-        $this->assertIsInt($validated['branch_id']);
-        $this->assertEquals(456, $validated['branch_id']);
+        $this->assertSame(456, $validated['branch_id']);
     }
 
-    public function test_uppercase_ticket_code(): void
+    public function test_uppercases_ticket_code(): void
     {
         $validated = $this->validator->validate('ticket.status', [
             'ticket_code' => 'abc123',
         ]);
 
-        $this->assertEquals('ABC123', $validated['ticket_code']);
+        $this->assertSame('ABC123', $validated['ticket_code']);
     }
 
-    public function test_rejects_missing_required_field(): void
+    public function test_accepts_ticket_id_without_ticket_code(): void
     {
-        $this->expectException(\Exception::class);
+        $validated = $this->validator->validate('ticket.status', [
+            'ticket_id' => '42',
+        ]);
+
+        $this->assertSame(42, $validated['ticket_id']);
+    }
+
+    public function test_rejects_missing_ticket_lookup_field(): void
+    {
+        $this->expectException(Exception::class);
 
         $this->validator->validate('ticket.status', []);
     }
@@ -58,34 +67,41 @@ class AssistantInputValidatorTest extends TestCase
             'branch_id' => '789',
         ]);
 
-        $this->assertEquals('daily', $validated['period']);
-        $this->assertEquals(789, $validated['branch_id']);
+        $this->assertSame('daily', $validated['period']);
+        $this->assertSame(789, $validated['branch_id']);
     }
 
-    public function test_accepts_optional_parameters(): void
+    public function test_defaults_reports_period_to_daily(): void
+    {
+        $validated = $this->validator->validate('reports.summary', []);
+
+        $this->assertSame('daily', $validated['period']);
+    }
+
+    public function test_accepts_valid_queue_status_filter(): void
     {
         $validated = $this->validator->validate('queue.status', [
             'status' => 'waiting',
         ]);
 
-        $this->assertEquals('waiting', $validated['status']);
+        $this->assertSame('waiting', $validated['status']);
     }
 
     public function test_rejects_invalid_status(): void
     {
-        $this->expectException(\Exception::class);
+        $this->expectException(Exception::class);
 
         $this->validator->validate('queue.status', [
             'status' => 'invalid_status',
         ]);
     }
 
-    public function test_normalizes_whitespace_in_input(): void
+    public function test_normalizes_whitespace_in_numeric_input(): void
     {
         $validated = $this->validator->validate('queue.status', [
             'branch_id' => '  123  ',
         ]);
 
-        // Should handle whitespace gracefully
+        $this->assertSame(123, $validated['branch_id']);
     }
 }

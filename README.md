@@ -1,114 +1,96 @@
-# SmartQ - Cloud Queue Management System
+# SmartQ Root App
 
-SmartQ is a digital, cloud-based queue management system built to remove the need for physical waiting lines. Customers can join a queue remotely via their mobile device, track their position in real time across dynamic gradient-infused ticket views, while staff manage operations via a premium, high-density operations dashboard.
+SmartQ is a Laravel 12 + Inertia React 19 queue management application. This repository contains the root app only.
 
-This monolithic platform acts as a strict, production-ready graduation project, built rigorously on modern SaaS architecture using **Laravel 12**, **React 19**, **Inertia.js**, and highly styled primitives provided by **shadcn/ui** and **Tailwind CSS**.
+## Stack
 
----
+- Backend: Laravel 12, PHP 8.2+
+- Frontend: Inertia.js, React 19, TypeScript, Tailwind CSS
+- Auth: Laravel session auth
+- Roles/permissions: Spatie Permission
+- Tests: PHPUnit via `php artisan test` and `composer test`
+- Build: Vite
 
-## ⚡ Tech Stack
+## Local Setup
 
-*   **Backend:** Laravel 12, PHP 8.3+, MySQL 8
-*   **Frontend:** React 19, TypeScript, Inertia.js
-*   **Styling & UI:** Tailwind CSS, shadcn/ui, Recharts, customized tokens.
-*   **Testing:** Pest (Backend), Playwright (E2E / Visual Regression)
-
-## 🏗️ Architecture & Philosophy
-
-SmartQ is crafted as a **Modular Monolith**. It avoids premature microservices logic, keeping all queue transitions, ticket generation locking, priority algorithms, and domain models safely within Laravel. The repository strictly enforces clean boundaries:
-
-*   **Service Layer & Thin Controllers:** Complex queue operations (e.g., ticket assignment, transactional queue sequencing, safe ticket state transitions) are isolated in `App\Services\QueueService.php`.
-*   **Role-Based Access Control (RBAC):** Leverages Spatie's permission package directly in the routing and middleware.
-*   **Atomic Front-end Components:** The UI is systematically broken down into reusable primitives (`PageHeader`, `KpiCard`, `TicketStatusBadge`) without styling inconsistencies.
-*   **AESTHETICS:** The UI is explicitly designed to replicate Top-Tier operational SaaS software. Clean colors, proper visual density logic, multi-platform adaptive UI flow, and smooth layout components are primary implementation goals.
-
----
-
-## 🚀 Setup & Installation (Local Development)
-
-### 1. Requirements
-*   PHP 8.3+
-*   Node.js 20+
-*   Composer
-*   MySQL/MariaDB (or SQLite for fast testing)
-
-### 2. Bootstrapping
-Clone the repository and install dependencies:
 ```bash
-git clone https://github.com/your-username/smartq.git
-cd smartq
-
 composer install
 npm install
-```
-
-### 3. Environment & Database
-```bash
 cp .env.example .env
 php artisan key:generate
-```
-The default in `.env.example` is **MySQL** (matching the production target and CI). Create the database and update the `DB_*` values in `.env`:
-```bash
-mysql -u root -p -e "CREATE DATABASE smartq;"
-```
-For fast local testing without MySQL, switch to SQLite by uncommenting the SQLite block in `.env.example` (and creating `database/database.sqlite`).
-
-Then migrate and optionally seed. **Note:** The seeder builds robust, realistic history to immediately populate dashboard charts.
-```bash
 php artisan migrate --seed
 ```
 
-### 3a. CI / GitHub Secrets
-The GitHub Actions workflows (`ci.yml`, `tests.yml`) connect to a MySQL service container using a single repository secret. Set it once in **Settings → Secrets and variables → Actions**:
+Run the app in separate terminals:
 
-| Secret | Used by | Notes |
-| :--- | :--- | :--- |
-| `DB_PASSWORD` | `mysql` service container, Pest, PHPUnit, Playwright | Any non-empty value (CI databases are ephemeral) |
-
-### 4. Running the application
-In separate terminals, run your local backend server and Vite bundler tool:
 ```bash
 php artisan serve
 npm run dev
 ```
 
----
+## Test And Build Commands
 
-## 🧪 Testing
+These are the commands currently used for local verification and CI:
 
-SmartQ heavily enforces code stability via multi-layered testing.
-
-**Run Backend Logic Tests (Pest)**
-Validates Queue priority domains, RBAC scope boundaries, branch protections, and transactional ticketing APIs.
 ```bash
-php artisan test
+npm run typecheck
+npm run lint
+npm run build
+php artisan test --testdox
+composer test
 ```
 
-**Run End-to-End Tests (Playwright)**
-Make sure everything flows smoothly from a user's perspective, running through UI auth forms to queue wait states.
+## Playwright E2E Smoke
+
+The root app now includes a minimal Playwright smoke suite for:
+
+- public queue join and track
+- teller call/start/complete lifecycle
+- management page rendering and dialog-open checks
+- reports page rendering
+
+Run it with:
+
 ```bash
-npx playwright test
+npm run e2e
 ```
 
----
+For local browser debugging:
 
-## 🔑 Demo Credentials
+```bash
+npm run e2e:headed
+```
 
-To experience the platform immediately following database seeding, utilize these exact credentials:
+The suite uses a dedicated `.env.e2e` file and a deterministic `E2eSmokeSeeder`. It does not rely on demo or production data.
 
-| Role | Email | Password |
-| :--- | :--- | :--- |
-| **Super Admin** | `admin@smartq.local` | `password` |
-| **Manager** | `manager@smartq.local` | `password` |
-| **Teller** | `teller@smartq.local` | `password` |
+## Access Model
 
-*(Customers do not require authentication to join the public queue web flow)*
+- Public users can join the queue, track a ticket, view public branch display screens, and use the public assistant for ticket-status lookups only.
+- Staff-only routes are protected by authenticated, active-user, and staff-role middleware.
+- `super_admin` can access all internal areas.
+- `manager` can access branch-scoped reports and management areas allowed by permission.
+- `teller` can access the teller console, dashboard, tickets, and operations assistant.
+- Public self-registration is disabled. Staff accounts are created through management user CRUD.
 
----
+## Teller Lifecycle
 
-## 🌐 Deployment Notes (Production)
+The teller console follows the enforced backend lifecycle:
 
-SmartQ is designed to function strictly as a standard Laravel monolithic deployment.
-1. Target an Ubuntu VPS running **Laravel Forge** or Dockerize the app using Laravel Sail / Octane natively.
-2. The GitHub Workflow (`.github/workflows/ci.yml`) is automatically designed to run backend tests, `npm build` checking, and E2E verifications against each commit.
-3. Queue monitoring utilizes background database queuing or Redis based off `.env` mapping. Ensure queue workers are daemonized (`php artisan queue:listen`).
+```text
+waiting -> called -> in_service -> on_hold -> in_service -> completed
+```
+
+If supported by the current ticket state, tellers may also cancel a ticket. Backend validation rejects invalid transitions, inactive tellers, tellers without active counters, and cross-scope mutations.
+
+## Assistant Boundaries
+
+- Public assistant scope is limited to ticket-safe lookups.
+- Operations assistant access requires an active authenticated staff user.
+- Assistant page context is intentionally minimized before requests are sent to the backend.
+
+## CI And Deployment Notes
+
+- `.github/workflows/ci.yml` runs the real backend and frontend verification commands listed above.
+- `.github/workflows/ci.yml` also runs the Playwright smoke suite against the root app with a dedicated SQLite E2E database.
+- No visual-regression suite is configured in this root app today.
+- `.github/workflows/deploy.yml` is a readiness stub only. It verifies production dependency installation and asset building, but it does not perform a server deployment.

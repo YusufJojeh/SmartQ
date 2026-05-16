@@ -18,12 +18,12 @@ class ServiceCategoryFactory extends Factory
 
     public function definition(): array
     {
-        $service = $this->faker->unique()->randomElement(self::$services);
+        $service = $this->faker->randomElement(self::$services);
 
         return [
             'branch_id' => Branch::factory(),
             'name' => $service['name'],
-            'code' => $service['code'],
+            'code' => sprintf('%s-%03d', $service['code'], $this->faker->unique()->numberBetween(1, 999)),
             'prefix' => $service['prefix'],
             'description' => $this->faker->sentence(),
             'priority_level' => $service['code'] === 'VIP' ? 1 : $this->faker->numberBetween(3, 8),

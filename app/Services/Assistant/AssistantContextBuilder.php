@@ -2,22 +2,25 @@
 
 namespace App\Services\Assistant;
 
-use Illuminate\Http\Request;
+use App\Models\Branch;
 
 class AssistantContextBuilder
 {
     public function build(array $context): array
     {
-        $user = auth()->user();
+        $user            = auth()->user();
         $isAuthenticated = $user !== null;
+        $branchId        = $isAuthenticated && $user->branch_id ? $user->branch_id : null;
+        $branchName      = $branchId ? Branch::find($branchId)?->name : null;
 
         return [
-            'user_id' => $isAuthenticated ? $user->id : null,
-            'user_role' => $this->getUserRole($user),
-            'scope' => $context['scope'] ?? ($isAuthenticated ? 'operations' : 'public'),
-            'branch_id' => $isAuthenticated && $user->branch_id ? $user->branch_id : null,
-            'locale' => app()->getLocale() ?? 'en',
-            'page_context' => $context['page'] ?? [],
+            'user_id'      => $isAuthenticated ? $user->id : null,
+            'user_role'    => $this->getUserRole($user),
+            'scope'        => $context['scope'] ?? ($isAuthenticated ? 'operations' : 'public'),
+            'branch_id'    => $branchId,
+            'branch_name'  => $branchName,
+            'locale'       => app()->getLocale() ?? 'en',
+            'page_context' => is_array($context['page'] ?? null) ? $context['page'] : [],
         ];
     }
 

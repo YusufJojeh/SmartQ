@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -34,7 +35,7 @@ class AuditLog extends Model
 
     public static function record(
         string $action,
-        ?Model $subject = null,
+        ?EloquentModel $subject = null,
         array $oldValues = [],
         array $newValues = [],
     ): self {

@@ -85,7 +85,7 @@ class AssistantService
 
             // Include prior conversation turns so the LLM has memory
             $history  = $this->buildHistory($conversation);
-            $messages = $this->buildMessages($systemPrompt, $groundingFacts, $message, $history);
+            $messages = $this->buildMessages($systemPrompt, $groundingFacts, $message, $history, $assistantContext);
 
             // ── Call LLM (OpenAI → Ollama fallback) ────────────────────
             [$responseText, $providerUsed, $fallbackUsed] = $this->callLlm($messages);
@@ -249,10 +249,12 @@ class AssistantService
         string $systemPrompt,
         string $groundingFacts,
         string $currentMessage,
-        array  $history
+        array  $history,
+        array  $assistantContext
     ): array {
         // Merge system prompt + data grounding into a single system turn
         $systemContent = $systemPrompt
+            . $this->formatPageContext($assistantContext)
             . "\n\n---\n## LIVE DATA FROM DATABASE\n"
             . $groundingFacts;
 
@@ -275,6 +277,20 @@ class AssistantService
         $messages[] = ['role' => 'user', 'content' => $this->redact($currentMessage)];
 
         return $messages;
+    }
+
+    private function formatPageContext(array $assistantContext): string
+    {
+        $pageContext = $assistantContext['page_context'] ?? [];
+
+        if (empty($pageContext)) {
+            return '';
+        }
+
+        $redactedPageContext = $this->redact($pageContext);
+        $json = json_encode($redactedPageContext, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        return "\n\n## PAGE CONTEXT\n{$json}";
     }
 
     // ─── PII Redaction ─────────────────────────────────────────────────────

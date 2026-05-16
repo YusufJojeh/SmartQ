@@ -15,6 +15,10 @@ class DashboardController extends Controller
     public function __invoke(Request $request): Response
     {
         $user     = $request->user();
+        abort_unless(
+            $user && ($user->hasPermissionTo('ticket.view') || $user->hasPermissionTo('report.view')),
+            403
+        );
         $branchId = $user->isSuperAdmin() ? null : $user->branch_id;
 
         $ticketsQuery = QueueTicket::query()->when($branchId, fn ($q) => $q->forBranch($branchId));
@@ -40,7 +44,7 @@ class DashboardController extends Controller
         // Last 7 days daily volume
         $dailyVolume = (clone $ticketsQuery)
             ->where('joined_at', '>=', now()->subDays(6)->startOfDay())
-            ->selectRaw('DATE(joined_at) as date, count(*) as total, SUM(status = "completed") as completed')
+            ->selectRaw('DATE(joined_at) as date, count(*) as total, SUM(CASE WHEN status = \'completed\' THEN 1 ELSE 0 END) as completed')
             ->groupBy('date')
             ->orderBy('date')
             ->get();

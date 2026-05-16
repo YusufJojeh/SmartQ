@@ -1,5 +1,6 @@
 .DS_Store
 .env
+.env.e2e
 .env.backup
 .env.production
 .phpactor.json
@@ -15,6 +16,10 @@
 /public/build
 /public/hot
 /public/storage
+/playwright-report
+/test-results
+/database/*.sqlite
+/database/*.sqlite3
 /storage/*.key
 /storage/pail
 /vendor
@@ -23,3 +28,6 @@ Homestead.json
 Homestead.yaml
 npm-debug.log
 yarn-error.log
+/smartq-nexus
+/.claude/worktrees
+/.claude/settings.local.json

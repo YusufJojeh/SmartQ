@@ -6,6 +6,7 @@ use App\Http\Requests\Assistant\StoreAssistantMessageRequest;
 use App\Models\AssistantConversation;
 use App\Services\AssistantService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class AssistantController extends Controller
@@ -21,8 +22,10 @@ class AssistantController extends Controller
         ]);
     }
 
-    public function operationsPage()
+    public function operationsPage(Request $request)
     {
+        abort_unless($this->canAccessOperationsAssistant($request), 403);
+
         return Inertia::render('assistant/index', [
             'scope' => 'operations',
         ]);
@@ -32,40 +35,47 @@ class AssistantController extends Controller
     {
         $request->validate([
             'conversation_id' => 'nullable|integer|exists:assistant_conversations,id',
-            'scope'           => 'nullable|in:public,operations',
-            'session_id'      => 'nullable|string|max:100',
+            'scope' => 'nullable|in:public,operations',
+            'session_id' => 'nullable|string|max:100',
         ]);
 
-        $user      = auth()->user();
-        $scope     = $request->input('scope', $user ? 'operations' : 'public');
+        $user = $request->user();
+        $scope = $request->input('scope', $user ? 'operations' : 'public');
         $sessionId = $request->input('session_id');
 
-        // Build owner key — prevents cross-user access
-        $ownerKey = $scope === 'public'
-            ? 'public'
-            : ($user ? "user:{$user->id}" : null);
+        if ($scope === 'operations' && ! $this->canAccessOperationsAssistant($request)) {
+            abort(403);
+        }
 
-        // Unauthenticated users cannot access operations scope history
-        if (!$ownerKey) {
+        $ownerKey = AssistantConversation::ownerKeyFor($scope, (string) $sessionId, $user?->id);
+
+        if (! $ownerKey) {
             return response()->json(['messages' => [], 'conversationId' => null]);
         }
 
-        // Locate the conversation — require session_id or conversation_id
-        $query = AssistantConversation::where('scope', $scope)
+        $query = AssistantConversation::query()
+            ->where('scope', $scope)
             ->where('owner_key', $ownerKey);
 
         if ($request->filled('conversation_id')) {
-            $query->where('id', $request->integer('conversation_id'));
+            $query->whereKey($request->integer('conversation_id'));
+
+            if ($scope === 'public') {
+                if (! $sessionId) {
+                    return response()->json(['messages' => [], 'conversationId' => null]);
+                }
+
+                $query->where('session_id', $sessionId);
+            }
         } elseif ($sessionId) {
             $query->where('session_id', $sessionId);
         } else {
-            // No identifier provided → return empty (client will resend after first message)
             return response()->json(['messages' => [], 'conversationId' => null]);
         }
 
         $conversation = $query->first();
 
-        if (!$conversation) {
+        if (! $conversation) {
             return response()->json(['messages' => [], 'conversationId' => null]);
         }
 
@@ -73,19 +83,19 @@ class AssistantController extends Controller
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(fn ($msg) => [
-                'id'        => $msg->id,
-                'role'      => $msg->role,
-                'content'   => $msg->content,
+                'id' => $msg->id,
+                'role' => $msg->role,
+                'content' => $msg->content,
                 'createdAt' => $msg->created_at->toIso8601String(),
-                'metadata'  => $msg->role === 'assistant' ? [
-                    'provider'     => $msg->provider_used,
+                'metadata' => $msg->role === 'assistant' ? [
+                    'provider' => $msg->provider_used,
                     'fallbackUsed' => (bool) $msg->fallback_used,
                 ] : null,
             ])
             ->all();
 
         return response()->json([
-            'messages'       => $messages,
+            'messages' => $messages,
             'conversationId' => $conversation->id,
         ]);
     }
@@ -94,9 +104,7 @@ class AssistantController extends Controller
     {
         try {
             $validated = $request->validated();
-
-            // Ensure scope matches authenticated state
-            $user = auth()->user();
+            $user = $request->user();
             $isAuthenticated = $user !== null;
             $requestedScope = $validated['context']['scope'];
 
@@ -106,19 +114,23 @@ class AssistantController extends Controller
                 ], 403);
             }
 
-            if (!$isAuthenticated && $requestedScope !== 'public') {
+            if (! $isAuthenticated && $requestedScope !== 'public') {
                 return response()->json([
                     'error' => 'Unauthenticated users must use public scope.',
                 ], 403);
             }
 
-            // Call assistant service
-            // Use client-supplied session_id from context (not server session)
+            if ($requestedScope === 'operations' && ! $this->canAccessOperationsAssistant($request)) {
+                return response()->json([
+                    'error' => 'You are not allowed to use the operations assistant.',
+                ], 403);
+            }
+
             $response = $this->assistantService->respond(
                 $validated['message'],
                 array_merge($validated['context'], [
                     'user_id' => $user?->id,
-                ])
+                ]),
             );
 
             if (isset($response['error'])) {
@@ -127,7 +139,7 @@ class AssistantController extends Controller
 
             return response()->json($response);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Assistant respond error', [
+            Log::error('Assistant respond error', [
                 'error' => $e->getMessage(),
             ]);
 
@@ -136,5 +148,14 @@ class AssistantController extends Controller
                 'success' => false,
             ], 503);
         }
+    }
+
+    private function canAccessOperationsAssistant(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user !== null
+            && $user->is_active
+            && $user->hasAnyRole(['super_admin', 'manager', 'teller']);
     }
 }

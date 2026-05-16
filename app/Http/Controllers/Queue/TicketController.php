@@ -74,6 +74,7 @@ class TicketController extends Controller
 
         abort_if(! $branch->is_active, 422, 'Branch is not currently accepting tickets.');
         abort_if(! $category->is_active, 422, 'Service is not currently available.');
+        abort_if($category->branch_id !== $branch->id, 422, 'Service does not belong to the selected branch.');
 
         $ticket = $this->queueService->issueTicket(
             $branch,
@@ -93,7 +94,7 @@ class TicketController extends Controller
         $ticket = QueueTicket::query()
             ->where('id', $request->id)
             ->where('display_code', $request->code)
-            ->with(['branch', 'serviceCategory', 'counter', 'teller'])
+            ->with(['branch', 'serviceCategory', 'counter'])
             ->firstOrFail();
 
         $position = $ticket->isWaiting() ? $ticket->positionInQueue() : null;
@@ -108,10 +109,51 @@ class TicketController extends Controller
             ->get();
 
         return Inertia::render('public/track-ticket', [
-            'ticket'       => $ticket,
+            'ticket'       => $this->toPublicTrackingTicket($ticket),
             'position'     => $position,
             'waitingCount' => $waitingCount,
-            'nowServing'   => $nowServing,
+            'nowServing'   => $nowServing->map(fn (QueueTicket $servingTicket) => $this->toPublicServingTicket($servingTicket))->values()->all(),
         ]);
+    }
+
+    private function toPublicTrackingTicket(QueueTicket $ticket): array
+    {
+        return [
+            'id' => $ticket->id,
+            'display_code' => $ticket->display_code,
+            'status' => $ticket->status,
+            'estimated_wait_minutes' => $ticket->estimated_wait_minutes,
+            'called_at' => $ticket->called_at?->toIso8601String(),
+            'completed_at' => $ticket->completed_at?->toIso8601String(),
+            'branch' => $ticket->branch ? [
+                'name' => $ticket->branch->name,
+                'code' => $ticket->branch->code,
+            ] : null,
+            'service_category' => $ticket->serviceCategory ? [
+                'name' => $ticket->serviceCategory->name,
+                'prefix' => $ticket->serviceCategory->prefix,
+            ] : null,
+            'counter' => $ticket->counter ? [
+                'name' => $ticket->counter->name,
+                'code' => $ticket->counter->code,
+            ] : null,
+        ];
+    }
+
+    private function toPublicServingTicket(QueueTicket $ticket): array
+    {
+        return [
+            'id' => $ticket->id,
+            'display_code' => $ticket->display_code,
+            'status' => $ticket->status,
+            'service_category' => $ticket->serviceCategory ? [
+                'name' => $ticket->serviceCategory->name,
+                'prefix' => $ticket->serviceCategory->prefix,
+            ] : null,
+            'counter' => $ticket->counter ? [
+                'name' => $ticket->counter->name,
+                'code' => $ticket->counter->code,
+            ] : null,
+        ];
     }
 }

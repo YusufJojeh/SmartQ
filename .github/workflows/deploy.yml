@@ -1,20 +1,18 @@
-name: Deploy
+name: Deploy Readiness Stub
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment'
+        description: 'Target environment label for readiness checks'
         required: true
         default: 'production'
         type: choice
         options: [production, staging]
 
 jobs:
-  deploy:
-    name: Deploy to ${{ github.event.inputs.environment || 'production' }}
+  readiness:
+    name: Build Verification Only
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'production' }}
 
@@ -40,34 +38,13 @@ jobs:
           php-version: '8.2'
           tools: composer:v2
 
-      - name: Install PHP dependencies (production)
+      - name: Install production PHP dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
 
-      # ─── Deploy to Laravel Forge / VPS via SSH ───────────────────────────
-      # Uncomment and configure when deploying to a real server:
-      #
-      # - name: Deploy via SSH
-      #   uses: appleboy/ssh-action@v1.0.0
-      #   with:
-      #     host: ${{ secrets.DEPLOY_HOST }}
-      #     username: ${{ secrets.DEPLOY_USER }}
-      #     key: ${{ secrets.DEPLOY_SSH_KEY }}
-      #     script: |
-      #       cd /var/www/smartq
-      #       git pull origin main
-      #       composer install --no-dev --optimize-autoloader
-      #       npm ci && npm run build
-      #       php artisan migrate --force
-      #       php artisan config:cache
-      #       php artisan route:cache
-      #       php artisan view:cache
-      #       php artisan queue:restart
-      #       sudo supervisorctl restart smartq-worker
-
-      - name: Deployment summary
+      - name: Deployment status summary
         run: |
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- Environment: ${{ github.event.inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment workflow status" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment label: ${{ github.event.inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
           echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Assets built: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- This workflow does not deploy infrastructure or application code." >> $GITHUB_STEP_SUMMARY
+          echo "- It verifies that production dependencies install and frontend assets build successfully." >> $GITHUB_STEP_SUMMARY

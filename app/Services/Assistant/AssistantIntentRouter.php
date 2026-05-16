@@ -106,15 +106,33 @@ class AssistantIntentRouter
             $add('policy.read', $branchId ? ['branch_id' => $branchId] : []);
         }
 
-        // ── 8. Fallback defaults ──────────────────────────────────────────────
-        if (empty($tools)) {
-            if ($scope === 'public') {
-                // Public users most likely want their ticket status
-                $add('queue.status', []);
-            } else {
-                // Staff: give overview
-                $add('queue.status', $branchId ? ['branch_id' => $branchId] : []);
-            }
+        // ── 8. Notifications summary (manager/super_admin only) ───────────────
+        if ($this->matches($lower, [
+            // English
+            'notification', 'alert', 'notify', 'turn approaching', 'sms', 'message sent',
+            'delivery', 'notif count', 'how many notif',
+            // Arabic
+            'إشعار', 'إشعارات', 'تنبيه', 'تنبيهات', 'رسائل مرسلة',
+        ])) {
+            $period = $this->extractPeriod($lower);
+            $notifInput = array_filter(['branch_id' => $branchId, 'period' => $period]);
+            $add('notifications.summary', $notifInput);
+        }
+
+        // ── 9. Audit summary (super_admin only) ───────────────────────────────
+        if ($this->matches($lower, [
+            // English
+            'audit', 'audit log', 'activity log', 'recent changes', 'what happened',
+            'system activity', 'who changed', 'recent actions', 'admin activity',
+            // Arabic
+            'سجل التدقيق', 'سجل النشاط', 'التغييرات الأخيرة', 'نشاط النظام', 'تدقيق',
+        ])) {
+            $add('audit.summary', []);
+        }
+
+        // ── 10. Fallback defaults ──────────────────────────────────────────────
+        if (empty($tools) && $scope !== 'public') {
+            $add('queue.status', $branchId ? ['branch_id' => $branchId] : []);
         }
 
         return ['tools' => $tools];

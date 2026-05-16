@@ -11,8 +11,9 @@ interface BranchProps {
     id?: number;
     name: string;
     code: string;
-    city: string;
+    city: string | null;
     address: string | null;
+    phone: string | null;
     is_active: boolean;
 }
 
@@ -32,6 +33,7 @@ export default function BranchDialog({
         code: branch?.code ?? '',
         city: branch?.city ?? '',
         address: branch?.address ?? '',
+        phone: branch?.phone ?? '',
         is_active: branch !== null ? branch.is_active : true,
     });
 
@@ -44,13 +46,14 @@ export default function BranchDialog({
                     code: branch.code,
                     city: branch.city || '',
                     address: branch.address || '',
+                    phone: branch.phone || '',
                     is_active: branch.is_active,
                 });
             } else {
                 reset();
             }
         }
-    }, [open, branch]);
+    }, [branch, clearErrors, open, reset, setData]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -95,6 +98,11 @@ export default function BranchDialog({
                             <Label htmlFor="address">{t('management.address')}</Label>
                             <Input id="address" value={data.address} onChange={(e) => setData('address', e.target.value)} />
                             {errors.address && <p className="text-sm text-red-500">{errors.address}</p>}
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="phone">{t('common.phone')}</Label>
+                            <Input id="phone" value={data.phone} onChange={(e) => setData('phone', e.target.value)} />
+                            {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
                         </div>
                         <div className="flex items-center justify-between mt-2">
                             <Label htmlFor="active" className="cursor-pointer">{t('management.activeStatus')}</Label>

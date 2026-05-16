@@ -65,7 +65,25 @@ export default function UserDialog({
                 setData('role', 'teller');
             }
         }
-    }, [open, user]);
+    }, [clearErrors, open, reset, setData, user]);
+
+    useEffect(() => {
+        if (data.role !== 'teller' && data.counter_id) {
+            setData('counter_id', '');
+        }
+    }, [data.counter_id, data.role, setData]);
+
+    useEffect(() => {
+        if (!data.branch_id || !data.counter_id) {
+            return;
+        }
+
+        const counterStillMatches = counters.some((counter) => counter.id === data.counter_id && counter.branch_id === data.branch_id);
+
+        if (!counterStillMatches) {
+            setData('counter_id', '');
+        }
+    }, [counters, data.branch_id, data.counter_id, setData]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();

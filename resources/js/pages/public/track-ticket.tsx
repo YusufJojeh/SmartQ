@@ -7,11 +7,10 @@ import { StatusOrb } from '@/components/system/status-orb';
 import { Surface } from '@/components/system/surface';
 import { Badge } from '@/components/ui/badge';
 import { LanguageSwitcher } from '@/components/language-switcher';
-import { type QueueTicket } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { MotionConfig, motion } from 'framer-motion';
-import { fadeUp, motionProps, staggerContainer } from '@/lib/motion';
-import { BellRing, CheckCircle2, Clock3, Layers3, MapPin, RefreshCw, ShieldAlert, Ticket, TimerReset, UserCircle2, Waves } from 'lucide-react';
+import { fadeUp, staggerContainer } from '@/lib/motion';
+import { BellRing, CheckCircle2, Clock3, Layers3, MapPin, ShieldAlert, Ticket, TimerReset, UserCircle2, Waves } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocale } from '@/hooks/use-locale';
 
@@ -23,8 +22,20 @@ interface NowServingItem {
     counter: { name: string; code: string } | null;
 }
 
+interface PublicTrackTicket {
+    id: number;
+    display_code: string;
+    status: string;
+    estimated_wait_minutes?: number | null;
+    called_at?: string | null;
+    completed_at?: string | null;
+    branch: { name: string; code: string } | null;
+    service_category: { name: string; prefix: string } | null;
+    counter: { name: string; code: string } | null;
+}
+
 interface Props {
-    ticket: QueueTicket;
+    ticket: PublicTrackTicket;
     position: number | null;
     waitingCount: number;
     nowServing: NowServingItem[];
@@ -59,8 +70,8 @@ function CountdownRail({ seconds }: { seconds: number }) {
                 <span>{t('track.liveRefresh')}</span>
                 <span data-testid="countdown-text">{remaining}s</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/8" data-testid="countdown-bar">
-                <div className="h-full rounded-full bg-[linear-gradient(90deg,#4b69ff,#6fddc2)] transition-[width] duration-1000" style={{ width: `${progress}%` }} />
+            <div className="h-2 overflow-hidden rounded-full bg-paper-soft hairline" data-testid="countdown-bar">
+                <div className="h-full rounded-full bg-gradient-amber transition-[width] duration-1000" style={{ width: `${progress}%` }} />
             </div>
         </div>
     );
@@ -181,13 +192,13 @@ export default function TrackTicket({ ticket, position, waitingCount, nowServing
                                     />
                                     <div className="grid gap-4 sm:grid-cols-2" data-testid="ticket-metrics-grid">
                                         {position !== null && ticket.status === 'waiting' ? (
-                                            <MetricFrame label={t('track.position')} value={`#${position}`} detail={t('track.positionDetail')} tone="blue" valueTestId="ticket-position" />
+                                            <MetricFrame label={t('track.position')} value={`#${position}`} detail={t('track.positionDetail')} tone="default" valueTestId="ticket-position" />
                                         ) : (
                                             <MetricFrame label={t('track.position')} value="Live" detail={t('track.livePositionDetail')} tone="green" valueTestId="ticket-position" />
                                         )}
                                         <MetricFrame label={t('track.estimatedWait')} value={t('common.minutesShort', { count: ticket.estimated_wait_minutes ?? 0 })} detail={t('track.estimatedWaitDetail')} tone="amber" valueTestId="ticket-wait-time" icon={Clock3} />
                                         <MetricFrame label={t('track.queueLoad')} value={waitingCount} detail={t('track.queueLoadDetail')} tone="default" icon={TimerReset} />
-                                        <MetricFrame label={t('track.serviceState')} value={t(`status.${ticket.status}`)} detail="Derived from live branch operations" tone={status.tone === 'red' ? 'red' : status.tone === 'green' ? 'green' : 'blue'} />
+                                        <MetricFrame label={t('track.serviceState')} value={t(`status.${ticket.status}`)} detail="Derived from live branch operations" tone={status.tone === 'red' ? 'red' : status.tone === 'green' ? 'green' : 'default'} />
                                     </div>
                                 </Surface>
 

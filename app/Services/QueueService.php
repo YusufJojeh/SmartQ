@@ -2,8 +2,13 @@
 
 namespace App\Services;
 
+use App\Events\TicketCalled;
+use App\Events\TicketCancelled;
+use App\Events\TicketCompleted;
+use App\Events\TicketJoined;
 use App\Models\AuditLog;
 use App\Models\Branch;
+use App\Models\Counter;
 use App\Models\QueueTicket;
 use App\Models\QueueTicketStatusHistory;
 use App\Models\ServiceCategory;
@@ -24,7 +29,7 @@ class QueueService
         int $priorityLevel = 5,
         ?string $priorityReason = null,
     ): QueueTicket {
-        return DB::transaction(function () use ($branch, $category, $customerName, $customerPhone, $priorityLevel, $priorityReason) {
+        $ticket = DB::transaction(function () use ($branch, $category, $customerName, $customerPhone, $priorityLevel, $priorityReason) {
             $sequence = QueueTicket::query()
                 ->forBranch($branch->id)
                 ->where('service_category_id', $category->id)
@@ -54,6 +59,10 @@ class QueueService
 
             return $ticket->load('serviceCategory', 'branch');
         });
+
+        TicketJoined::dispatch($ticket);
+
+        return $ticket;
     }
 
     /**
@@ -62,7 +71,11 @@ class QueueService
      */
     public function callNext(User $teller): ?QueueTicket
     {
-        return DB::transaction(function () use ($teller) {
+        $ticket = DB::transaction(function () use ($teller) {
+            $this->ensureActiveTeller($teller);
+            $this->ensureAssignedCounter($teller);
+            $this->ensureNoActiveTicket($teller);
+
             $ticket = QueueTicket::query()
                 ->forBranch($teller->branch_id)
                 ->whereIn('status', ['waiting', 'notified'])
@@ -88,6 +101,12 @@ class QueueService
 
             return $ticket->load('serviceCategory', 'branch', 'counter');
         });
+
+        if ($ticket) {
+            TicketCalled::dispatch($ticket);
+        }
+
+        return $ticket;
     }
 
     /**
@@ -96,13 +115,22 @@ class QueueService
     public function startService(QueueTicket $ticket, User $teller): QueueTicket
     {
         return DB::transaction(function () use ($ticket, $teller) {
-            abort_if($ticket->status !== 'called', 422, 'Ticket must be in called status.');
-            abort_if($ticket->teller_id !== $teller->id, 403, 'Not assigned to this ticket.');
+            $this->ensureActiveTeller($teller);
+            $this->ensureTicketOwnership($ticket, $teller);
+            abort_if(! in_array($ticket->status, ['called', 'on_hold'], true), 422, 'Ticket must be in called or on-hold status.');
 
-            $ticket->update(['status' => 'in_service', 'service_started_at' => now()]);
-            $this->recordStatusChange($ticket, 'called', 'in_service', $teller->id);
+            $oldStatus = $ticket->status;
+            $payload = ['status' => 'in_service'];
 
-            return $ticket;
+            if (! $ticket->service_started_at) {
+                $payload['service_started_at'] = now();
+            }
+
+            $ticket->update($payload);
+            $this->recordStatusChange($ticket, $oldStatus, 'in_service', $teller->id);
+            AuditLog::record('ticket.started', $ticket, ['status' => $oldStatus], ['status' => 'in_service']);
+
+            return $ticket->load('serviceCategory', 'branch', 'counter');
         });
     }
 
@@ -111,7 +139,9 @@ class QueueService
      */
     public function completeService(QueueTicket $ticket, User $teller): QueueTicket
     {
-        return DB::transaction(function () use ($ticket, $teller) {
+        $ticket = DB::transaction(function () use ($ticket, $teller) {
+            $this->ensureActiveTeller($teller);
+            $this->ensureTicketOwnership($ticket, $teller);
             abort_if(! in_array($ticket->status, ['in_service', 'on_hold']), 422, 'Cannot complete ticket in current status.');
 
             $completedAt  = now();
@@ -127,10 +157,18 @@ class QueueService
             ]);
 
             $this->recordStatusChange($ticket, $oldStatus, 'completed', $teller->id);
-            AuditLog::record('ticket.completed', $ticket);
+            AuditLog::record('ticket.completed', $ticket, ['status' => $oldStatus], [
+                'status' => 'completed',
+                'actual_wait_minutes' => $actualWait,
+                'actual_service_minutes' => $actualService,
+            ]);
 
-            return $ticket;
+            return $ticket->load('serviceCategory', 'branch', 'counter');
         });
+
+        TicketCompleted::dispatch($ticket);
+
+        return $ticket;
     }
 
     /**
@@ -139,31 +177,40 @@ class QueueService
     public function holdTicket(QueueTicket $ticket, User $teller, ?string $reason = null): QueueTicket
     {
         return DB::transaction(function () use ($ticket, $teller, $reason) {
+            $this->ensureActiveTeller($teller);
+            $this->ensureTicketOwnership($ticket, $teller);
             abort_if($ticket->status !== 'in_service', 422, 'Can only hold a ticket that is in service.');
 
+            $oldStatus = $ticket->status;
             $ticket->update(['status' => 'on_hold', 'notes' => $reason]);
-            $this->recordStatusChange($ticket, 'in_service', 'on_hold', $teller->id, $reason);
-            AuditLog::record('ticket.held', $ticket);
+            $this->recordStatusChange($ticket, $oldStatus, 'on_hold', $teller->id, $reason);
+            AuditLog::record('ticket.held', $ticket, ['status' => $oldStatus], ['status' => 'on_hold', 'reason' => $reason]);
 
-            return $ticket;
+            return $ticket->load('serviceCategory', 'branch', 'counter');
         });
     }
 
     /**
      * Cancel a ticket that has not yet reached a terminal state.
      */
-    public function cancelTicket(QueueTicket $ticket, ?string $reason = null): QueueTicket
+    public function cancelTicket(QueueTicket $ticket, User $actor, ?string $reason = null): QueueTicket
     {
-        return DB::transaction(function () use ($ticket, $reason) {
+        $ticket = DB::transaction(function () use ($ticket, $actor, $reason) {
+            $this->ensureActiveUser($actor);
+            $this->ensureCancellationScope($ticket, $actor);
             abort_if($ticket->isTerminal(), 422, 'Cannot cancel a terminal ticket.');
 
             $oldStatus = $ticket->status;
             $ticket->update(['status' => 'cancelled', 'notes' => $reason]);
-            $this->recordStatusChange($ticket, $oldStatus, 'cancelled', auth()->id(), $reason);
-            AuditLog::record('ticket.cancelled', $ticket);
+            $this->recordStatusChange($ticket, $oldStatus, 'cancelled', $actor->id, $reason);
+            AuditLog::record('ticket.cancelled', $ticket, ['status' => $oldStatus], ['status' => 'cancelled', 'reason' => $reason]);
 
-            return $ticket;
+            return $ticket->load('serviceCategory', 'branch', 'counter');
         });
+
+        TicketCancelled::dispatch($ticket);
+
+        return $ticket;
     }
 
     /**
@@ -248,5 +295,63 @@ class QueueService
             'reason'          => $reason,
             'changed_at'      => now(),
         ]);
+    }
+
+    private function ensureActiveTeller(User $teller): void
+    {
+        abort_if(! $teller->isTeller(), 403, 'Only tellers can perform this action.');
+        $this->ensureActiveUser($teller);
+    }
+
+    private function ensureActiveUser(User $user): void
+    {
+        abort_if(! $user->is_active, 403, 'Your account is inactive.');
+    }
+
+    private function ensureAssignedCounter(User $teller): void
+    {
+        abort_if(! $teller->branch_id, 422, 'Teller must belong to a branch.');
+        abort_if(! $teller->counter_id, 422, 'Teller must be assigned to a counter.');
+
+        $hasValidCounter = Counter::query()
+            ->whereKey($teller->counter_id)
+            ->where('branch_id', $teller->branch_id)
+            ->where('is_active', true)
+            ->exists();
+
+        abort_if(! $hasValidCounter, 422, 'Assigned counter is unavailable.');
+    }
+
+    private function ensureNoActiveTicket(User $teller): void
+    {
+        $hasActiveTicket = QueueTicket::query()
+            ->where('teller_id', $teller->id)
+            ->whereIn('status', ['called', 'in_service', 'on_hold'])
+            ->lockForUpdate()
+            ->exists();
+
+        abort_if($hasActiveTicket, 422, 'Finish the current ticket before calling another one.');
+    }
+
+    private function ensureTicketOwnership(QueueTicket $ticket, User $teller): void
+    {
+        abort_if($ticket->branch_id !== $teller->branch_id, 403, 'Ticket does not belong to your branch.');
+        abort_if($ticket->teller_id !== $teller->id, 403, 'Not assigned to this ticket.');
+        abort_if(! $teller->counter_id || $ticket->counter_id !== $teller->counter_id, 403, 'Ticket is not assigned to your counter.');
+    }
+
+    private function ensureCancellationScope(QueueTicket $ticket, User $actor): void
+    {
+        if ($actor->isSuperAdmin()) {
+            return;
+        }
+
+        abort_if($ticket->branch_id !== $actor->branch_id, 403, 'Ticket does not belong to your branch.');
+
+        if ($actor->isManager()) {
+            return;
+        }
+
+        $this->ensureTicketOwnership($ticket, $actor);
     }
 }
